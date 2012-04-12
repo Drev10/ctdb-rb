@@ -1,11 +1,11 @@
-$:.unshift(File.dirname(__FILE__) + '/../lib')
-require 'ctree'
+# $:.unshift(File.dirname(__FILE__) + '/../lib')
+# require 'ctree'
 require 'test/unit'
+require 'turn/autorun'
 
 class TestCtree < Test::Unit::TestCase
   
   def setup
-    
   end
   
   def test_init
