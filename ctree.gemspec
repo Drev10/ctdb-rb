@@ -12,4 +12,5 @@ Gem::Specification.new do |s|
   s.extensions  = [ 'ext/ctree_api/extconf.rb' ]
 
   s.add_development_dependency "rake-compiler"
+  s.add_development_dependency "turn"
 end
