@@ -1,7 +1,7 @@
 begin
   require 'ctree_api'
 rescue LoadError
-  warn "beep beep"
+  warn "WARNING: ctree_api not loaded"
 end
 
 class Ctree
