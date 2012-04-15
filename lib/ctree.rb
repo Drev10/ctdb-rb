@@ -1,5 +1,5 @@
 begin
-  require 'ctree_api'
+  require 'ctree_sdk'
 rescue LoadError
   warn "WARNING: ctree_api not loaded"
 end
