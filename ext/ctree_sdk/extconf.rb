@@ -27,7 +27,6 @@ elsif linux?
   lib     = "ctclient"
 end
 
-package  = "ctree_api"
 base_dir = with_config('faircom-dir')
 inc_dirs = [ "#{base_dir}/include", "#{base_dir}/include/sdk/#{api_dir}" ]
 # cflags   = "-g -m64"
@@ -43,4 +42,4 @@ errors << "'ctdbsdk'" unless have_header('ctdbsdk.hpp')
 errors << "'#{lib}'"  unless have_library(lib)
 fail("missing dependencies: #{errors.join(',')}") unless errors.empty?
 
-create_makefile(package, File.expand_path(File.dirname(__FILE__)))
+create_makefile("ctree_sdk")
