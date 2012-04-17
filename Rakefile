@@ -1,7 +1,7 @@
 require File.dirname(__FILE__) + '/lib/ctree'
 require 'rake/extensiontask'
 
-Rake::ExtensionTask.new('ctree_api')
+Rake::ExtensionTask.new('ctree_sdk')
 
 task :build do
   `gem build ctree.gemspec`
