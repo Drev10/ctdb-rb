@@ -1,10 +1,7 @@
 #include "ruby.h"
 #include "ctdbsdk.h" /* c-tree headers */
 
-#define NILorSTRING(obj) ( NIL_P(obj) ? NULL : StringValuePtr(obj) )
-
-#define GetCtreeSession(obj) (Check_Type(obj, T_DATA), (struct ctree_session*)DATA_PTR(obj))
-#define GetCtreeTable(obj)   (Check_Type(obj, T_DATA), (struct ctree_table*)DATA_PTR(obj))
+#define GetCtree(obj) (Check_Type(obj, T_DATA), (struct ctree*)DATA_PTR(obj))
 
 VALUE mCtree;
 VALUE cCtreeError;    // Ctree::Error
@@ -13,19 +10,7 @@ VALUE cCtreeTable;    // Ctree::Table
 VALUE cCtreeRecord;   // Ctree::Record
 VALUE cCtreeField;    // Ctree::Field
 
-struct ctree_session {
-    CTHANDLE handle;
-};
-
-struct ctree_table {
-    CTHANDLE handle;
-};
-
-struct ctree_record {
-    CTHANDLE handle;
-};
-
-struct ctree_field {
+struct ctree {
     CTHANDLE handle;
 };
 
@@ -33,7 +18,7 @@ struct ctree_field {
  * Ctree::Session
  */
 static void 
-free_ctree_session(struct ctree_session* ct)
+free_ctree_session(struct ctree* ct)
 {
     ctdbFreeSession(ct->handle);
     xfree(ct);
@@ -43,11 +28,10 @@ free_ctree_session(struct ctree_session* ct)
 static VALUE
 ctree_session_init(VALUE klass)
 {
-    struct ctree_session* ct;
+    struct ctree* ct;
     VALUE obj;
 
-    obj = Data_Make_Struct(klass, struct ctree_session, 0, free_ctree_session, ct);
-
+    obj = Data_Make_Struct(klass, struct ctree, 0, free_ctree_session, ct);
     // Allocate a new session for logon only. No session or database dictionary
     // files will be used. No database functions can be used with this session mode.
     if((ct->handle = ctdbAllocSession(CTSESSION_CTREE)) == NULL)
@@ -63,12 +47,12 @@ ctree_session_logon(int argc, VALUE *argv, VALUE obj)
 {
     VALUE host, user, pass;
     char *h, *u, *p;
-    CTHANDLE* session = GetCtreeSession(obj)->handle;
+    CTHANDLE* session = GetCtree(obj)->handle;
 
     rb_scan_args(argc, argv, "03", &host, &user, &pass);
-    h = NILorSTRING(host);
-    u = NILorSTRING(user);
-    p = NILorSTRING(pass);
+    // h = NILorSTRING(host);
+    // u = NILorSTRING(user);
+    // p = NILorSTRING(pass);
 
     if(ctdbLogon(session, h, u, p) != CTDBRET_OK)
         rb_raise(cCtreeError, "[%d] ctdbLogon failed.", ctdbGetError(&session));
@@ -80,7 +64,7 @@ ctree_session_logon(int argc, VALUE *argv, VALUE obj)
 static VALUE 
 ctree_session_logout(VALUE obj)
 {
-    CTHANDLE* session = GetCtreeSession(obj)->handle;
+    CTHANDLE* session = GetCtree(obj)->handle;
     ctdbLogout(session);
     return obj;
 }
@@ -89,7 +73,7 @@ ctree_session_logout(VALUE obj)
 static VALUE 
 ctree_session_active(VALUE obj)
 {
-    CTHANDLE* session = GetCtreeSession(obj)->handle;
+    CTHANDLE* session = GetCtree(obj)->handle;
     return ctdbIsActiveSession(session) ? Qtrue : Qfalse;
 }
 
@@ -97,7 +81,7 @@ ctree_session_active(VALUE obj)
  * Ctree::Table
  */
 static void
-free_ctree_table(struct ctree_table* ct)
+free_ctree_table(struct ctree* ct)
 {
     ctdbFreeTable(ct->handle);
     xfree(ct);
@@ -109,11 +93,11 @@ ctree_table_init(VALUE klass, VALUE session)
 {
     Check_Type(session, T_DATA);
 
-    struct ctree_table* ct;
-    CTHANDLE *cth = GetCtreeSession(session)->handle;
+    struct ctree* ct;
+    CTHANDLE *cth = GetCtree(session)->handle;
     VALUE obj;
 
-    obj = Data_Make_Struct(klass, struct ctree_table, 0, free_ctree_table, ct);
+    obj = Data_Make_Struct(klass, struct ctree, 0, free_ctree_table, ct);
 
     if((ct->handle = ctdbAllocTable(cth)) == NULL)
         rb_raise(cCtreeError, "[%d] ctdbAllocTable failed", ctdbGetError(&cth));
@@ -128,7 +112,7 @@ ctree_table_path_set(VALUE obj, VALUE path)
 {
     Check_Type(path, T_STRING);
 
-    CTHANDLE *ct = GetCtreeTable(obj)->handle;
+    CTHANDLE *ct = GetCtree(obj)->handle;
 
     if(ctdbSetTablePath(ct, RSTRING_PTR(path)) != CTDBRET_OK)
         rb_raise(cCtreeError, "[%d] ctdbSetTablePath failed.", ctdbGetError(&ct));
@@ -140,7 +124,7 @@ ctree_table_path_set(VALUE obj, VALUE path)
 static VALUE
 ctree_table_path_get(VALUE obj)
 {
-    VALUE s = rb_str_new2(ctdbGetTablePath(GetCtreeTable(obj)->handle));
+    VALUE s = rb_str_new2(ctdbGetTablePath(GetCtree(obj)->handle));
     return RSTRING_LEN(s) == 0 ? Qnil : s;
 }
 
@@ -148,7 +132,7 @@ ctree_table_path_get(VALUE obj)
 static VALUE
 ctree_table_name_get(VALUE obj)
 {
-    VALUE s = rb_str_new2(ctdbGetTableName(GetCtreeTable(obj)->handle));
+    VALUE s = rb_str_new2(ctdbGetTableName(GetCtree(obj)->handle));
     return RSTRING_LEN(s) == 0 ? Qnil : s;
 }
 
@@ -158,7 +142,7 @@ ctree_table_open(VALUE obj, VALUE name)
 {
     Check_Type(name, T_STRING);
 
-    CTHANDLE *ct = GetCtreeSession(obj)->handle;
+    CTHANDLE *ct = GetCtree(obj)->handle;
 
     if(ctdbOpenTable(ct, "custmast", CTOPEN_NORMAL) !=  CTDBRET_OK)
         rb_raise(cCtreeError, "[%d] ctdbOpenTable failed.", ctdbGetError(&ct));
@@ -170,7 +154,7 @@ ctree_table_open(VALUE obj, VALUE name)
 static VALUE
 ctree_table_close(VALUE obj)
 {
-    CTHANDLE *ct = GetCtreeTable(obj)->handle;
+    CTHANDLE *ct = GetCtree(obj)->handle;
 
     if(ctdbCloseTable(ct) != CTDBRET_OK)
         rb_raise(cCtreeError, "[%d] ctdbCloseTable failed.", ctdbGetError(&ct));
@@ -182,21 +166,23 @@ ctree_table_close(VALUE obj)
  * Ctree::Record
  */
 static void 
-free_ctree_record(struct ctree_record* ct)
+free_ctree_record(struct ctree* ct)
 {
     ctdbFreeRecord(ct->handle);
     xfree(ct);
 }
+
+// Ctree::Record.new
 static VALUE
 ctree_record_init(VALUE klass, VALUE table)
 {
     Check_Type(table, T_DATA);
 
-    struct ctree_record* ct;
-    CTHANDLE *cth = GetCtreeTable(table)->handle;
+    struct ctree* ct;
+    CTHANDLE *cth = GetCtree(table)->handle;
     VALUE obj;
 
-    obj = Data_Make_Struct(klass, struct ctree_record, 0, free_ctree_record, ct);
+    obj = Data_Make_Struct(klass, struct ctree, 0, free_ctree_record, ct);
     if((ct->handle = ctdbAllocRecord(cth)) == NULL)
         rb_raise(cCtreeError, "[%d] ctdbAllocRecord failed.", ctdbGetError(&cth));
 
@@ -204,6 +190,13 @@ ctree_record_init(VALUE klass, VALUE table)
     return obj;
 }
 
+// Ctree::Record#find
+// static VALUE
+// ctree_record_find(VALUE klass, )
+// {
+//     CTHANDLE *ct = GetCtreeRecord(obj)->handle;
+//     
+// }
 // Ctree::Record#field(name)
 // static VALUE
 // ctree_record_get_field(VALUE obj,)
