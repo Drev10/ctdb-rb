@@ -14,8 +14,15 @@ class TestCtree < Test::Unit::TestCase
   def test_session
     assert_nothing_raised { @session = Ctree::Session.new }
     assert_equal(false, @session.active?)
+    assert_raise(ArgumentError){ @session.logon }
     assert_nothing_raised { @session.logon(@c[:host], @c[:username], @c[:password]) }
     assert(@session.active?)
+    assert(@session.lock(Ctree::LOCK_WRITE))
+    assert(@session.locked?)
+    assert(@session.unlock)
+    assert_nothing_raised{ @session.lock!(Ctree::LOCK_WRITE) }
+    # assert_raise(Ctree::Error){ @session.lock!(Ctree::LOCK_READ) }
+    assert_nothing_raised{ @session.unlock! }
     assert_nothing_raised { @session.logout }
     assert_equal(false, @session.active?)
   end
@@ -39,8 +46,9 @@ class TestCtree < Test::Unit::TestCase
       @session = Ctree::Session.new
       @session.logon(@c[:host], @c[:username], @c[:password])
       @table = Ctree::Table.new(@session)
+      @table.open(@table_name)
+      @record = Ctree::Record.new(@table)
     end
-
   end
 
 end
