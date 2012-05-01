@@ -42,4 +42,4 @@ errors << "'ctdbsdk'" unless have_header('ctdbsdk.hpp')
 errors << "'#{lib}'"  unless have_library(lib)
 fail("missing dependencies: #{errors.join(',')}") unless errors.empty?
 
-create_makefile("ctree_sdk")
+create_makefile("ctdb_sdk")

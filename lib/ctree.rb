@@ -1,7 +1,7 @@
 begin
-  require 'ctree_sdk'
+  require 'ctdb_sdk'
 rescue LoadError
-  warn "WARNING: ctree_sdk not loaded."
+  warn "WARNING: ctdb_sdk not loaded."
 end
 
 module Ctree
