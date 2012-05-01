@@ -21,9 +21,9 @@ struct ctree_record {
     CTHANDLE table;
 };
 
-/*
- * Ctree::Session
- */
+// ==================
+// = Ctree::Session =
+// ==================
 static void 
 free_ctree_session(struct ctree* ct)
 {
@@ -61,7 +61,7 @@ ctree_session_logon(int argc, VALUE *argv, VALUE obj)
     char *p = RSTRING_PTR(pass);
 
     if(ctdbLogon(session, h, u, p) != CTDBRET_OK)
-        rb_raise(cCtreeError, "[%d] ctdbLogon failed.", ctdbGetError(&session));
+        rb_raise(cCtreeError, "[%d] ctdbLogon failed.", ctdbGetError(session));
 
     return obj;
 }
@@ -102,7 +102,7 @@ ctree_session_lock_bang(VALUE obj, VALUE mode)
     CTHANDLE ct = GetCtree(obj)->handle;
 
     if(ctdbLock(ct, FIX2INT(mode)) != CTDBRET_OK)
-        rb_raise(cCtreeError, "[%d] ctdbLock failed.", ctdbGetError(&ct));
+        rb_raise(cCtreeError, "[%d] ctdbLock failed.", ctdbGetError(ct));
 
     return Qtrue;
 }
@@ -130,14 +130,50 @@ ctree_session_unlock_bang(VALUE obj)
     CTHANDLE ct = GetCtree(obj)->handle;
 
     if(ctdbUnlock(ct) != CTDBRET_OK)
-        rb_raise(cCtreeError, "[%d] ctdbUnlock failed.", ctdbGetError(&ct));
+        rb_raise(cCtreeError, "[%d] ctdbUnlock failed.", ctdbGetError(ct));
 
     return Qtrue;
 }
 
-/*
- * Ctree::Table
- */
+// Ctree::Session#path_prefix
+static VALUE
+ctree_session_get_path_prefix(VALUE obj)
+{
+    pTEXT prefix = ctdbGetPathPrefix(GetCtree(obj)->handle);
+    return prefix ? rb_str_new2(prefix) : Qnil;
+}
+
+// Ctree::Session#path_prefix=(prefix)
+static VALUE
+ctree_session_set_path_prefix(VALUE obj, VALUE prefix)
+{
+    pTEXT pp;
+
+    switch(rb_type(prefix)){
+        case T_STRING :
+            pp = ((RSTRING_LEN(prefix) == 0) ? NULL : RSTRING_PTR(prefix));
+            break;
+        case T_NIL :
+            pp = NULL;
+            break;
+        default :
+            rb_raise(rb_eArgError, "Unexpected value type `%s'", 
+                rb_obj_classname(prefix));
+            break;
+    }
+
+    CTHANDLE session = GetCtree(obj)->handle;
+
+    if(ctdbSetPathPrefix(session, pp) != CTDBRET_OK)
+        rb_raise(cCtreeError, "[%d] ctdbSetPathPrefix failed.", 
+            ctdbGetError(session));
+
+    return Qtrue;
+}
+
+// ================
+// = Ctree::Table =
+// ================
 static void
 free_ctree_table(struct ctree* ct)
 {
@@ -158,7 +194,7 @@ ctree_table_init(VALUE klass, VALUE session)
     obj = Data_Make_Struct(klass, struct ctree, 0, free_ctree_table, ct);
 
     if((ct->handle = ctdbAllocTable(cth)) == NULL)
-        rb_raise(cCtreeError, "[%d] ctdbAllocTable failed", ctdbGetError(&cth));
+        rb_raise(cCtreeError, "[%d] ctdbAllocTable failed", ctdbGetError(cth));
 
     rb_obj_call_init(obj, 0, NULL); // Ctree::Table.initialize
     return obj;
@@ -173,7 +209,7 @@ ctree_table_set_path(VALUE obj, VALUE path)
     CTHANDLE ct = GetCtree(obj)->handle;
 
     if(ctdbSetTablePath(ct, RSTRING_PTR(path)) != CTDBRET_OK)
-        rb_raise(cCtreeError, "[%d] ctdbSetTablePath failed.", ctdbGetError(&ct));
+        rb_raise(cCtreeError, "[%d] ctdbSetTablePath failed.", ctdbGetError(ct));
 
     return Qnil;
 }
@@ -194,6 +230,30 @@ ctree_table_get_name(VALUE obj)
     return RSTRING_LEN(s) == 0 ? Qnil : s;
 }
 
+// Ctree::Table#index(identifier)
+// static VALUE
+// ctree_table_get_index(VALUE obj, VALUE identifier)
+// {
+//     struct ctree *index;
+//     CTHANDLE ct = GetCtree(obj)->handle;
+//     VALUE iobj;
+//     obj = Data_Make_Struct(klass, struct ctree, 0, free_ctree_table, ct);
+// 
+//     switch(TYPE(identifier)){
+//         case T_STRING :
+//         case T_SYMBOL :
+//             ndx = ctdbGetIndexByName(ct, RSTRING_PTR(RSTRING(identifier)));
+//               break;
+//           case T_FIXNUM :
+//               ndx = ctdbGetIndex(ct, FIX2INT(identifier));
+//               break;
+//           default :
+//               rb_raise(rb_eArgError, "Unexpected value type `%s'", 
+//                        rb_obj_classname(identifier));
+//               break;
+//       }
+// }
+
 // Ctree::Table#open(name)
 static VALUE
 ctree_table_open(VALUE obj, VALUE name)
@@ -203,9 +263,40 @@ ctree_table_open(VALUE obj, VALUE name)
     CTHANDLE ct = GetCtree(obj)->handle;
 
     if(ctdbOpenTable(ct, RSTRING_PTR(name), CTOPEN_NORMAL) !=  CTDBRET_OK)
-        rb_raise(cCtreeError, "[%d] ctdbOpenTable failed.", ctdbGetError(&ct));
+        rb_raise(cCtreeError, "[%d] ctdbOpenTable failed.", ctdbGetError(ct));
 
     return obj;
+}
+
+// Ctree::Table#field_names
+static VALUE
+ctree_table_get_field_names(VALUE obj)
+{
+    int i, n;
+    CTHANDLE table = GetCtree(obj)->handle;
+    CTHANDLE field;
+    pTEXT fname;
+    VALUE fields;
+
+    if((n = ctdbGetTableFieldCount(table)) == -1)
+        rb_raise(cCtreeError, "[%d] ctdbGetTableFieldCount failed.", 
+            ctdbGetError(table));
+
+    fields = rb_ary_new2(n);
+
+    for(i = 0; i < n; i++){
+        // Get the field handle.
+        if((field = ctdbGetField(table, i)) == NULL)
+            rb_raise(cCtreeError, "[%d] ctdbGetField failed.", 
+                ctdbGetError(table));
+        // Use the field handle to retrieve the field name.
+        if((fname = ctdbGetFieldName(field)) == NULL)
+            rb_raise(cCtreeError, "[%d] ctdbGetFieldName failed.", 
+                ctdbGetError(table));
+        // Store the field name
+        rb_ary_store(fields, i, rb_str_new2(fname));
+    }
+    return fields;
 }
 
 // Ctree::Table#close
@@ -215,15 +306,38 @@ ctree_table_close(VALUE obj)
     CTHANDLE ct = GetCtree(obj)->handle;
 
     if(ctdbCloseTable(ct) != CTDBRET_OK)
-        rb_raise(cCtreeError, "[%d] ctdbCloseTable failed.", ctdbGetError(&ct));
+        rb_raise(cCtreeError, "[%d] ctdbCloseTable failed.", ctdbGetError(ct));
 
     return Qtrue;
 }
 
-/*
- * Ctree::Index
- */
- 
+// ================
+// = Ctree::Index =
+// ================
+static void
+free_ctree_index(struct ctree* ct)
+{
+    xfree(ct);
+}
+
+// // Ctree::Index.new
+// static VALUE
+// ctree_index_init(VALUE klass, VALUE name, VALUE type, VALUE unique, VALUE is_null)
+// {
+//     Check_Type(type, T_DATA);
+// 
+//     struct ctree* ct;
+//     VALUE obj;
+// 
+//     obj = Data_Make_Struct(klass, struct ctree, 0, free_ctree_index, ct);
+// 
+//     if((ct->handle = ctdbAllocTable(cth)) == NULL)
+//         rb_raise(cCtreeError, "[%d] ctdbAllocTable failed", ctdbGetError(cth));
+// 
+//     rb_obj_call_init(obj, 0, NULL); // Ctree::Index.initialize
+//     return obj;
+// }
+
 // Ctree::Index#type
 static VALUE
 ctree_index_get_key_type(VALUE obj)
@@ -252,14 +366,14 @@ ctree_index_get_key_length(VALUE obj)
 static VALUE
 ctree_index_is_unique(VALUE obj)
 {
-    CTHANDLE ct = GetCtree(obj)->handle
+    CTHANDLE ct = GetCtree(obj)->handle;
     return ctdbGetIndexDuplicateFlag(ct) == YES ? Qfalse : Qtrue;
 }
 
-/*
- * Ctree::Record
- */
-static void 
+// =================
+// = Ctree::Record =
+// =================
+static void
 free_ctree_record(struct ctree_record* ctrec)
 {
     ctdbFreeRecord(ctrec->handle);
@@ -279,7 +393,7 @@ ctree_record_init(VALUE klass, VALUE table)
     ctrec->table = GetCtree(table)->handle;
     if((ctrec->handle = ctdbAllocRecord(ctrec->table)) == NULL)
         rb_raise(cCtreeError, "[%d] ctdbAllocRecord failed.", 
-                 ctdbGetError(&ctrec->table));
+                 ctdbGetError(ctrec->table));
 
     rb_obj_call_init(obj, 0, NULL); // Ctree::Record.initialize
     return obj;
@@ -297,135 +411,209 @@ ctree_record_get_default_index(VALUE obj)
     return name ? rb_str_new2(name) : Qnil;
 }
 
-// Ctree::Record#default_index=(name_or_index)
+// Ctree::Record#default_index=(identifier)
 static VALUE
-ctree_record_set_default_index(VALUE obj, VALUE name)
+ctree_record_set_default_index(VALUE obj, VALUE identifier)
 {
-    // void *key;
-    // 
-    // switch(TYPE(name)){
-    //     case T_STRING :
-    //     case T_SYMBOL :
-    //     case T_FIXNUM :
-    //         
-    //     default :
-    //     
-    // }
+    CTHANDLE ct = GetCtreeRecord(obj)->table;
+    CTDBRET rc;
+
+    switch(TYPE(identifier)){
+        case T_STRING :
+        case T_SYMBOL :
+            rc = ctdbSetDefaultIndexByName(ct, RSTRING_PTR(RSTRING(identifier)));
+            break;
+        case T_FIXNUM :
+            rc = ctdbSetDefaultIndex(ct, FIX2INT(identifier));
+            break;
+        default :
+            rb_raise(rb_eArgError, "Unexpected value type `%s'", 
+                     rb_obj_classname(identifier));
+            break;
+    }
+    if(rc != CTDBRET_OK)
+        rb_raise(cCtreeError, "[%d] ctdbSetDefaultIndex failed.", ctdbGetError(ct));
+
     return Qtrue;
 }
 
+// Ctree::Record#first
+static VALUE
+ctree_record_first(VALUE obj)
+{
+    return ctdbFirstRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
+}
 
-// Ctree::Record#field(name)
-// static VALUE
-// ctree_record_get_value(VALUE obj, VALUE field)
-// {
-//     CTHANDLE *record = GetCtree(obj)->handle
-// }
+// Ctree::Record#first!
+static VALUE
+ctree_record_first_bang(VALUE obj)
+{
+    CTHANDLE ct = GetCtreeRecord(obj)->handle;
 
-// Ctree::Session#set(field, value)
-// static VALUE
-// ctree_record_set_field(VALUE obj, VALUE name, VALUE value)
-// {
-//     struct ctree_record *ctrec = GetCtreeRecord(obj);
-//     CTHANDLE *field;
-// 
-//     if((field = ctdGetFieldByName(ctrec->table, RSTRING_PTR(name))) == NULL)
-//         rb_raise(cCtreeError, "[%d] ctdbGetFieldByName failed", 
-//                  ctdbGetError(&ctrec->handle));
-// 
-//     switch(ctdbGetFieldType(field)){
-//         case CT_CHAR :
-//         case CT_CHARU :
-//         case CT_STRING :
-//         case CT_FSTRING :
-//         case CT_FPSTRING :
-//         case CT_F2STRING :
-//         case CT_F4STRING :
-//             // Check_Type(value, )
-//             // do work
-//             break;
-//         case CT_CURRENCY :
-//             
-//             // do work
-//             break;
-//     }
-// 
-//     return Qtrue;
-// }
+    if(ctdbFirstRecord(ct) != CTDBRET_OK)
+        rb_raise(cCtreeError, "[%d] ctdbFirstRecord failed.", ctdbGetError(ct));
 
-// Ctree::Record#get(field)
+    return obj;
+}
+
+// Ctree::Record#last
+static VALUE
+ctree_record_last(VALUE obj)
+{
+    return ctdbLastRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
+}
+
+// Ctree::Record#last!
+static VALUE
+ctree_record_last_bang(VALUE obj)
+{
+    CTHANDLE ct = GetCtreeRecord(obj)->handle;
+    if(ctdbLastRecord(ct) != CTDBRET_OK)
+        rb_raise(cCtreeError, "[%d] ctdbLastRecord failed.", ctdbGetError(ct));
+
+    return obj;
+}
+
+// Ctree::Record#next
+static VALUE
+ctree_record_next(VALUE obj)
+{
+    return ctdbNextRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
+}
+
+// Ctree::Record#prev
+static VALUE
+ctree_record_prev(VALUE obj)
+{
+    return ctdbPrevRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
+}
+
+// Ctree::Record#field(field)
 static VALUE
 ctree_record_get_field(VALUE obj, VALUE name)
 {
-    struct ctree_record ctrec = GetCtreeRecord(obj);
+    struct ctree_record *ctrec = GetCtreeRecord(obj);
     CTHANDLE field;
-    // CTDBRET rc;
-    int num, size;
-    // void *cval;
-    // VALUE rbval;
+    CTDBRET rc;
+    int n, len;  // field number and data length
+    void* cval;  // generic pointer to store field data
+    cval = ALLOC(void*);
 
-    if((num = ctdbGetFieldNumberByName(ct, RSTRING_PTR(name))) == -1)
-        rb_raise(cCtreeError, "[%d] ctdbGetFieldNumberByName failed.", 
-                 ctdbGetError(&ctrec->handle));
+    VALUE rbval; // field data converted to ruby data-type
 
-    if((field = ctdbGetField(ctrec->table)))
-        rb_raise(cCtreeError, "[%d] ctdbGetField failed.", ctdbGetError(ctrec->table))
+    if((n = ctdbGetFieldNumber(ctrec->table, RSTRING_PTR(name))) == -1)
+        rb_raise(cCtreeError, "[%d] ctdbGetFieldNumber failed.", 
+                 ctdbGetError(ctrec->handle));
+
+    if((field = ctdbGetField(ctrec->table, n)) == NULL)
+        rb_raise(cCtreeError, "[%d] ctdbGetField failed.", 
+                 ctdbGetError(ctrec->table));
 
     switch(ctdbGetFieldType(field)){
+        case CT_CHARS :
         case CT_FSTRING :
-        case CT_FPSTRING :
-        case CT_F2STRING :
-        case CT_F4STRING :
-        case CT_PSTRING :
-        case CT_2STRING :
-        case CT_4STRING :
+    //     case CT_FPSTRING :
+    //     case CT_F2STRING :
+    //     case CT_F4STRING :
+    //     case CT_PSTRING :
+    //     case CT_2STRING :
+    //     case CT_4STRING :
+        case CT_VARCHAR :
+        case CT_LVC :
         case CT_STRING :
-            size = ctdbGetFieldDataLength(ct, num);
-            rc = ctdbGetFieldAsString(ct, num, ()cval, size)) != CTDBRET_OK)
+            len = ctdbGetFieldDataLength(ctrec->handle, n);
+            rc = ctdbGetFieldAsString(ctrec->handle, n, (CTSTRING)cval, (len+1));
+            rbval = rb_str_new2(cval);
             break;
-        case CT_DATE :
-            rc = ctdbGetFieldAsDate(ct, num, ()cval);
-            break;
-        case CT_TIME : 
-            rc = ctdbGetFieldAsTime(ct, num, ()cval);
-            break;
-        case CT_UTINYINT :
-        case CT_CHARU :
-        case CT_USMALLINT :
-        case CT_INT2U :
-        case CT_UINTEGER :
-        case CT_INT4U :
-            rc = ctdbGetFieldAsUnsigned(ct, num, ()cval);
-            break;
+    //     case CT_DATE :
+    //         rc = ctdbGetFieldAsDate(ct, num, ()cval);
+    //         break;
+    //     case CT_TIME : 
+    //         rc = ctdbGetFieldAsTime(ct, num, ()cval);
+    //         break;
+    //     case CT_UTINYINT :
+    //     case CT_CHARU :
+    //     case CT_USMALLINT :
+    //     case CT_INT2U :
+    //     case CT_UINTEGER :
+    //     case CT_INT4U :
+    //         rc = ctdbGetFieldAsUnsigned(ct, num, ()cval);
+    //         break;
         case CT_TINYINT :
         case CT_CHAR :
         case CT_SMALLINT :
         case CT_INT2 :
         case CT_INTEGER :
         case CT_INT4 :
-            rc = ctdbGetFieldAsSigned(ct, num, ()cval);
+            rc = ctdbGetFieldAsSigned(ctrec->handle, n, (pCTSIGNED)&cval);
+            rbval = INT2NUM(cval);
+            break;
+        default :
+            rb_raise(cCtreeError, "Unknown data-type for field `%s'", 
+                     RSTRING_PTR(name));
             break;
     }
     if(rc != CTDBRET_OK)
-        
+        rb_raise(cCtreeError, "FOO BAR!");
 
-    return value;
+    return rbval;
+}
+
+
+// Ctree::Session#set(field, value)
+static VALUE
+ctree_record_set_field(VALUE obj, VALUE name, VALUE value)
+{
+    struct ctree_record *ctrec = GetCtreeRecord(obj);
+    CTHANDLE field;
+    NINT n;
+    CTDBRET rc;
+
+    if((field = ctdbGetFieldByName(ctrec->table, RSTRING_PTR(name))) == NULL)
+        rb_raise(cCtreeError, "[%d] ctdbGetFieldByName failed", 
+                 ctdbGetError(ctrec->handle));
+
+    if((n = ctdbGetFieldNbr(field)) == -1)
+        rb_raise(cCtreeError, "[%d] ctdbGetFieldNbr failed.", 
+                 ctdbGetError(ctrec->handle));
+
+    switch(ctdbGetFieldType(field)){
+        case CT_STRING :
+        case CT_FSTRING :
+            Check_Type(value, T_STRING);
+            rc = ctdbSetFieldAsString(ctrec->handle, n, 
+                                      (CTSTRING)RSTRING_PTR(value));
+            break;
+        case CT_INT4 :
+            Check_Type(value, T_FIXNUM);
+            rc = ctdbSetFieldAsSigned(ctrec->handle, n, (CTSIGNED)FIX2INT(value));
+            break;
+        default :
+            rb_raise(cCtreeError, "Unknown data-type for field `%s'", 
+                     RSTRING_PTR(name));
+            break;
+    }
+
+    if(rc != CTDBRET_OK)
+        rb_raise(cCtreeError, "[%d] wtf?", ctdbGetError(ctrec->handle));
+
+    return Qtrue;
 }
 
 // Ctree::Record#write
 static VALUE
 ctree_record_write(VALUE obj)
 {
-    CTHANDLE *ct = GetCtree(obj)->handle;
+    CTHANDLE ct = GetCtree(obj)->handle;
     if(ctdbWriteRecord(ct))
-        rb_raise(cCtreeError, "[%d] ctdbWriteRecord failed.", ctdbGetError(&ct));
+        rb_raise(cCtreeError, "[%d] ctdbWriteRecord failed.", ctdbGetError(ct));
 
     return Qtrue;
 }
 
-/*
- * Ctree::Field
- */
+// ================
+// = Ctree::Field =
+// ================
 // static void
 // free_ctree_field(struct ctree_field* ct)
 // {
@@ -468,6 +656,8 @@ Init_ctree_sdk(void)
     rb_define_method(cCtreeSession, "locked?", ctree_session_is_locked, 0);
     rb_define_method(cCtreeSession, "unlock", ctree_session_unlock, 0);
     rb_define_method(cCtreeSession, "unlock!", ctree_session_unlock_bang, 0);
+    rb_define_method(cCtreeSession, "path_prefix", ctree_session_get_path_prefix, 0);
+    rb_define_method(cCtreeSession, "path_prefix=", ctree_session_set_path_prefix, 1);
 
     // Ctree::Table
     cCtreeTable = rb_define_class_under(mCtree, "Table", rb_cObject);
@@ -477,12 +667,15 @@ Init_ctree_sdk(void)
     rb_define_method(cCtreeTable, "name", ctree_table_get_name, 0);
     rb_define_method(cCtreeTable, "open", ctree_table_open, 1);
     rb_define_method(cCtreeTable, "close", ctree_table_close, 0);
-    rb_define_method(cCtreeTable, "indecies", ctree_table_get_indecies, 0);
+    // rb_define_method(cCtreeTable, "index", ctree_table_get_index, 1);
+    // rb_define_method(cCtreeTable, "indecies", ctree_table_get_indecies, 0);
+    rb_define_method(cCtreeTable, "field_names", ctree_table_get_field_names, 0);
 
     // Ctree::Index
     cCtreeIndex = rb_define_class_under(mCtree, "Index", rb_cObject);
+    // rb_define_singleton_method(cCtreeTable, "new", ctree_index_init, 4);
     rb_define_method(cCtreeIndex, "name", ctree_index_get_name, 0);
-    rb_define_method(cCtreeIndex, "number", ctree_index_get_number, 0);
+    // rb_define_method(cCtreeIndex, "number", ctree_index_get_number, 0);
     rb_define_method(cCtreeIndex, "key_type",   ctree_index_get_key_type, 0);
     rb_define_method(cCtreeIndex, "key_length", ctree_index_get_key_length, 0);
     rb_define_method(cCtreeIndex, "unique?", ctree_index_is_unique, 0);
@@ -492,7 +685,15 @@ Init_ctree_sdk(void)
     rb_define_singleton_method(cCtreeRecord, "new", ctree_record_init, 1);
     rb_define_method(cCtreeRecord, "default_index", ctree_record_get_default_index, 0);
     rb_define_method(cCtreeRecord, "default_index=", ctree_record_set_default_index, 1);
-    
+    rb_define_method(cCtreeRecord, "first", ctree_record_first, 0);
+    rb_define_method(cCtreeRecord, "first!", ctree_record_first_bang, 0);
+    rb_define_method(cCtreeRecord, "last", ctree_record_last, 0);
+    rb_define_method(cCtreeRecord, "last!", ctree_record_last_bang, 0);
+    rb_define_method(cCtreeRecord, "next", ctree_record_next, 0);
+    rb_define_method(cCtreeRecord, "prev", ctree_record_prev, 0);
+    rb_define_method(cCtreeRecord, "get_field", ctree_record_get_field, 1);
+    rb_define_method(cCtreeRecord, "set_field", ctree_record_set_field, 2);
+
     // Ctree::Field
     // cCtreeField = rb_define_class_under(mCtree, "Field", rb_cObject);
     // rb_define_singleton_method(cCtreeRecord, "new", ctree_field_init, -1);
