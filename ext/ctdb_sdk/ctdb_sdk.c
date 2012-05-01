@@ -5,12 +5,12 @@
 #define GetCtreeRecord(obj) (Check_Type(obj, T_DATA), (struct ctree_record*)DATA_PTR(obj))
 
 VALUE mCtree;
-VALUE cCtreeError;    // Ctree::Error
-VALUE cCtreeSession;  // Ctree::Session
-VALUE cCtreeTable;    // Ctree::Table
-VALUE cCtreeIndex;    // Ctree::Index
-VALUE cCtreeRecord;   // Ctree::Record
-VALUE cCtreeField;    // Ctree::Field
+VALUE cCtreeError;    // CTDB::Error
+VALUE cCtreeSession;  // CTDB::Session
+VALUE cCtreeTable;    // CTDB::Table
+VALUE cCtreeIndex;    // CTDB::Index
+VALUE cCtreeRecord;   // CTDB::Record
+VALUE cCtreeField;    // CTDB::Field
 
 struct ctree {
     CTHANDLE handle;
@@ -22,7 +22,7 @@ struct ctree_record {
 };
 
 // ==================
-// = Ctree::Session =
+// = CTDB::Session =
 // ==================
 static void 
 free_ctree_session(struct ctree* ct)
@@ -31,7 +31,7 @@ free_ctree_session(struct ctree* ct)
     xfree(ct);
 }
 
-// Ctree::Session.new
+// CTDB::Session.new
 static VALUE
 ctree_session_init(VALUE klass)
 {
@@ -44,11 +44,11 @@ ctree_session_init(VALUE klass)
     if((ct->handle = ctdbAllocSession(CTSESSION_CTREE)) == NULL)
         rb_raise(cCtreeError, "ctdbAllocSession failed.");
 
-    rb_obj_call_init(obj, 0, NULL); // Ctree::Session.initialize
+    rb_obj_call_init(obj, 0, NULL); // CTDB::Session.initialize
     return obj;
 }
 
-// Ctree::Session#logon(host, username, password)
+// CTDB::Session#logon(host, username, password)
 static VALUE 
 ctree_session_logon(int argc, VALUE *argv, VALUE obj)
 {
@@ -66,7 +66,7 @@ ctree_session_logon(int argc, VALUE *argv, VALUE obj)
     return obj;
 }
 
-// Ctree::Session#logout
+// CTDB::Session#logout
 static VALUE 
 ctree_session_logout(VALUE obj)
 {
@@ -75,7 +75,7 @@ ctree_session_logout(VALUE obj)
     return obj;
 }
 
-// Ctree::Session#active?
+// CTDB::Session#active?
 static VALUE 
 ctree_session_is_active(VALUE obj)
 {
@@ -83,7 +83,7 @@ ctree_session_is_active(VALUE obj)
     return ctdbIsActiveSession(session) ? Qtrue : Qfalse;
 }
 
-// Ctree::Session#lock(mode)
+// CTDB::Session#lock(mode)
 static VALUE
 ctree_session_lock(VALUE obj, VALUE mode)
 {
@@ -93,7 +93,7 @@ ctree_session_lock(VALUE obj, VALUE mode)
     return ctdbLock(ct, FIX2INT(mode)) == CTDBRET_OK ? Qtrue : Qfalse;
 }
 
-// Ctree::Session#lock!(mode)
+// CTDB::Session#lock!(mode)
 static VALUE
 ctree_session_lock_bang(VALUE obj, VALUE mode)
 {
@@ -107,7 +107,7 @@ ctree_session_lock_bang(VALUE obj, VALUE mode)
     return Qtrue;
 }
 
-// Ctree::Session#locked?
+// CTDB::Session#locked?
 static VALUE
 ctree_session_is_locked(VALUE obj)
 {
@@ -115,7 +115,7 @@ ctree_session_is_locked(VALUE obj)
     return ctdbIsLockActive(ct) == YES ? Qtrue : Qfalse;
 }
 
-// Ctree::Session#unlock
+// CTDB::Session#unlock
 static VALUE
 ctree_session_unlock(VALUE obj)
 {
@@ -123,7 +123,7 @@ ctree_session_unlock(VALUE obj)
     return ctdbUnlock(ct) == CTDBRET_OK ? Qtrue : Qfalse;
 }
 
-// Ctree::Session#unlock!
+// CTDB::Session#unlock!
 static VALUE
 ctree_session_unlock_bang(VALUE obj)
 {
@@ -135,7 +135,7 @@ ctree_session_unlock_bang(VALUE obj)
     return Qtrue;
 }
 
-// Ctree::Session#path_prefix
+// CTDB::Session#path_prefix
 static VALUE
 ctree_session_get_path_prefix(VALUE obj)
 {
@@ -143,7 +143,7 @@ ctree_session_get_path_prefix(VALUE obj)
     return prefix ? rb_str_new2(prefix) : Qnil;
 }
 
-// Ctree::Session#path_prefix=(prefix)
+// CTDB::Session#path_prefix=(prefix)
 static VALUE
 ctree_session_set_path_prefix(VALUE obj, VALUE prefix)
 {
@@ -172,7 +172,7 @@ ctree_session_set_path_prefix(VALUE obj, VALUE prefix)
 }
 
 // ================
-// = Ctree::Table =
+// = CTDB::Table =
 // ================
 static void
 free_ctree_table(struct ctree* ct)
@@ -181,7 +181,7 @@ free_ctree_table(struct ctree* ct)
     xfree(ct);
 }
 
-// Ctree::Table.new
+// CTDB::Table.new
 static VALUE
 ctree_table_init(VALUE klass, VALUE session)
 {
@@ -196,11 +196,11 @@ ctree_table_init(VALUE klass, VALUE session)
     if((ct->handle = ctdbAllocTable(cth)) == NULL)
         rb_raise(cCtreeError, "[%d] ctdbAllocTable failed", ctdbGetError(cth));
 
-    rb_obj_call_init(obj, 0, NULL); // Ctree::Table.initialize
+    rb_obj_call_init(obj, 0, NULL); // CTDB::Table.initialize
     return obj;
 }
 
-// Ctree::Table#path=(value)
+// CTDB::Table#path=(value)
 static VALUE
 ctree_table_set_path(VALUE obj, VALUE path)
 {
@@ -214,7 +214,7 @@ ctree_table_set_path(VALUE obj, VALUE path)
     return Qnil;
 }
 
-// Ctree::Table#path
+// CTDB::Table#path
 static VALUE
 ctree_table_get_path(VALUE obj)
 {
@@ -222,7 +222,7 @@ ctree_table_get_path(VALUE obj)
     return RSTRING_LEN(s) == 0 ? Qnil : s;
 }
 
-// Ctree::Table#name
+// CTDB::Table#name
 static VALUE
 ctree_table_get_name(VALUE obj)
 {
@@ -230,7 +230,7 @@ ctree_table_get_name(VALUE obj)
     return RSTRING_LEN(s) == 0 ? Qnil : s;
 }
 
-// Ctree::Table#index(identifier)
+// CTDB::Table#index(identifier)
 // static VALUE
 // ctree_table_get_index(VALUE obj, VALUE identifier)
 // {
@@ -254,7 +254,7 @@ ctree_table_get_name(VALUE obj)
 //       }
 // }
 
-// Ctree::Table#open(name)
+// CTDB::Table#open(name)
 static VALUE
 ctree_table_open(VALUE obj, VALUE name)
 {
@@ -268,7 +268,7 @@ ctree_table_open(VALUE obj, VALUE name)
     return obj;
 }
 
-// Ctree::Table#field_names
+// CTDB::Table#field_names
 static VALUE
 ctree_table_get_field_names(VALUE obj)
 {
@@ -299,7 +299,7 @@ ctree_table_get_field_names(VALUE obj)
     return fields;
 }
 
-// Ctree::Table#close
+// CTDB::Table#close
 static VALUE
 ctree_table_close(VALUE obj)
 {
@@ -312,7 +312,7 @@ ctree_table_close(VALUE obj)
 }
 
 // ================
-// = Ctree::Index =
+// = CTDB::Index =
 // ================
 static void
 free_ctree_index(struct ctree* ct)
@@ -320,7 +320,7 @@ free_ctree_index(struct ctree* ct)
     xfree(ct);
 }
 
-// // Ctree::Index.new
+// // CTDB::Index.new
 // static VALUE
 // ctree_index_init(VALUE klass, VALUE name, VALUE type, VALUE unique, VALUE is_null)
 // {
@@ -334,18 +334,18 @@ free_ctree_index(struct ctree* ct)
 //     if((ct->handle = ctdbAllocTable(cth)) == NULL)
 //         rb_raise(cCtreeError, "[%d] ctdbAllocTable failed", ctdbGetError(cth));
 // 
-//     rb_obj_call_init(obj, 0, NULL); // Ctree::Index.initialize
+//     rb_obj_call_init(obj, 0, NULL); // CTDB::Index.initialize
 //     return obj;
 // }
 
-// Ctree::Index#type
+// CTDB::Index#type
 static VALUE
 ctree_index_get_key_type(VALUE obj)
 {
     return ctdbGetIndexKeyType(GetCtree(obj)->handle);
 }
 
-// Ctree::Index#name
+// CTDB::Index#name
 static VALUE
 ctree_index_get_name(VALUE obj)
 {
@@ -353,7 +353,7 @@ ctree_index_get_name(VALUE obj)
     return name ? rb_str_new2(name) : Qnil;
 }
 
-// Ctree::Index#length
+// CTDB::Index#length
 static VALUE
 ctree_index_get_key_length(VALUE obj)
 {
@@ -362,7 +362,7 @@ ctree_index_get_key_length(VALUE obj)
     return len == -1 ? Qnil : INT2FIX(len);
 }
 
-// Ctree::Index#unique?
+// CTDB::Index#unique?
 static VALUE
 ctree_index_is_unique(VALUE obj)
 {
@@ -371,7 +371,7 @@ ctree_index_is_unique(VALUE obj)
 }
 
 // =================
-// = Ctree::Record =
+// = CTDB::Record =
 // =================
 static void
 free_ctree_record(struct ctree_record* ctrec)
@@ -380,7 +380,7 @@ free_ctree_record(struct ctree_record* ctrec)
     xfree(ctrec);
 }
 
-// Ctree::Record.new
+// CTDB::Record.new
 static VALUE
 ctree_record_init(VALUE klass, VALUE table)
 {
@@ -395,11 +395,11 @@ ctree_record_init(VALUE klass, VALUE table)
         rb_raise(cCtreeError, "[%d] ctdbAllocRecord failed.", 
                  ctdbGetError(ctrec->table));
 
-    rb_obj_call_init(obj, 0, NULL); // Ctree::Record.initialize
+    rb_obj_call_init(obj, 0, NULL); // CTDB::Record.initialize
     return obj;
 }
 
-// Ctree::Record#default_index
+// CTDB::Record#default_index
 static VALUE
 ctree_record_get_default_index(VALUE obj)
 {
@@ -411,7 +411,7 @@ ctree_record_get_default_index(VALUE obj)
     return name ? rb_str_new2(name) : Qnil;
 }
 
-// Ctree::Record#default_index=(identifier)
+// CTDB::Record#default_index=(identifier)
 static VALUE
 ctree_record_set_default_index(VALUE obj, VALUE identifier)
 {
@@ -437,14 +437,14 @@ ctree_record_set_default_index(VALUE obj, VALUE identifier)
     return Qtrue;
 }
 
-// Ctree::Record#first
+// CTDB::Record#first
 static VALUE
 ctree_record_first(VALUE obj)
 {
     return ctdbFirstRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
 }
 
-// Ctree::Record#first!
+// CTDB::Record#first!
 static VALUE
 ctree_record_first_bang(VALUE obj)
 {
@@ -456,14 +456,14 @@ ctree_record_first_bang(VALUE obj)
     return obj;
 }
 
-// Ctree::Record#last
+// CTDB::Record#last
 static VALUE
 ctree_record_last(VALUE obj)
 {
     return ctdbLastRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
 }
 
-// Ctree::Record#last!
+// CTDB::Record#last!
 static VALUE
 ctree_record_last_bang(VALUE obj)
 {
@@ -474,21 +474,21 @@ ctree_record_last_bang(VALUE obj)
     return obj;
 }
 
-// Ctree::Record#next
+// CTDB::Record#next
 static VALUE
 ctree_record_next(VALUE obj)
 {
     return ctdbNextRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
 }
 
-// Ctree::Record#prev
+// CTDB::Record#prev
 static VALUE
 ctree_record_prev(VALUE obj)
 {
     return ctdbPrevRecord(GetCtreeRecord(obj)->handle) == CTDBRET_OK ? obj : Qnil;
 }
 
-// Ctree::Record#field(field)
+// CTDB::Record#field(field)
 static VALUE
 ctree_record_get_field(VALUE obj, VALUE name)
 {
@@ -560,7 +560,7 @@ ctree_record_get_field(VALUE obj, VALUE name)
 }
 
 
-// Ctree::Session#set(field, value)
+// CTDB::Session#set(field, value)
 static VALUE
 ctree_record_set_field(VALUE obj, VALUE name, VALUE value)
 {
@@ -600,7 +600,7 @@ ctree_record_set_field(VALUE obj, VALUE name, VALUE value)
     return Qtrue;
 }
 
-// Ctree::Record#write
+// CTDB::Record#write
 static VALUE
 ctree_record_write(VALUE obj)
 {
@@ -612,7 +612,7 @@ ctree_record_write(VALUE obj)
 }
 
 // ================
-// = Ctree::Field =
+// = CTDB::Field =
 // ================
 // static void
 // free_ctree_field(struct ctree_field* ct)
@@ -622,7 +622,7 @@ ctree_record_write(VALUE obj)
 void 
 Init_ctree_sdk(void)
 {
-    mCtree = rb_define_module("Ctree");
+    mCtree = rb_define_module("CTDB");
     // c-treeDB Find Modes
     rb_define_const(mCtree, "FIND_EQ", CTFIND_EQ);
     rb_define_const(mCtree, "FIND_LT", CTFIND_LT);
@@ -642,10 +642,10 @@ Init_ctree_sdk(void)
     rb_define_const(mCtree, "INDEX_LEADPAD", CTINDEX_LEADPAD);
     rb_define_const(mCtree, "INDEX_ERROR", CTINDEX_ERROR);
 
-    // Ctree::Error
+    // CTDB::Error
     cCtreeError = rb_define_class_under(mCtree, "Error", rb_eStandardError);
 
-    // Ctree::Session
+    // CTDB::Session
     cCtreeSession = rb_define_class_under(mCtree, "Session", rb_cObject);
     rb_define_singleton_method(cCtreeSession, "new", ctree_session_init, 0);
     rb_define_method(cCtreeSession, "logon", ctree_session_logon, -1);
@@ -659,7 +659,7 @@ Init_ctree_sdk(void)
     rb_define_method(cCtreeSession, "path_prefix", ctree_session_get_path_prefix, 0);
     rb_define_method(cCtreeSession, "path_prefix=", ctree_session_set_path_prefix, 1);
 
-    // Ctree::Table
+    // CTDB::Table
     cCtreeTable = rb_define_class_under(mCtree, "Table", rb_cObject);
     rb_define_singleton_method(cCtreeTable, "new", ctree_table_init, 1);
     rb_define_method(cCtreeTable, "path=", ctree_table_set_path, 1);
@@ -671,7 +671,7 @@ Init_ctree_sdk(void)
     // rb_define_method(cCtreeTable, "indecies", ctree_table_get_indecies, 0);
     rb_define_method(cCtreeTable, "field_names", ctree_table_get_field_names, 0);
 
-    // Ctree::Index
+    // CTDB::Index
     cCtreeIndex = rb_define_class_under(mCtree, "Index", rb_cObject);
     // rb_define_singleton_method(cCtreeTable, "new", ctree_index_init, 4);
     rb_define_method(cCtreeIndex, "name", ctree_index_get_name, 0);
@@ -680,7 +680,7 @@ Init_ctree_sdk(void)
     rb_define_method(cCtreeIndex, "key_length", ctree_index_get_key_length, 0);
     rb_define_method(cCtreeIndex, "unique?", ctree_index_is_unique, 0);
 
-    // Ctree::Record
+    // CTDB::Record
     cCtreeRecord = rb_define_class_under(mCtree, "Record", rb_cObject);
     rb_define_singleton_method(cCtreeRecord, "new", ctree_record_init, 1);
     rb_define_method(cCtreeRecord, "default_index", ctree_record_get_default_index, 0);
@@ -694,7 +694,7 @@ Init_ctree_sdk(void)
     rb_define_method(cCtreeRecord, "get_field", ctree_record_get_field, 1);
     rb_define_method(cCtreeRecord, "set_field", ctree_record_set_field, 2);
 
-    // Ctree::Field
+    // CTDB::Field
     // cCtreeField = rb_define_class_under(mCtree, "Field", rb_cObject);
     // rb_define_singleton_method(cCtreeRecord, "new", ctree_field_init, -1);
 }

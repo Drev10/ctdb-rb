@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/lib/ctdb'
 
 Gem::Specification.new do |s|
   s.name     = "ctdb"
-  s.version  = "#{Ctree::Version}"
+  s.version  = "#{CTDB::Version}"
   s.platform = Gem::Platform::RUBY
   s.summary  = "FairCom ruby SDK"
 
