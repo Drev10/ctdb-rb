@@ -5,3 +5,5 @@ Makefile
 *.so
 *.gem
 tmp
+.yard
+doc
