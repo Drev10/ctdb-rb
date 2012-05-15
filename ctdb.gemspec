@@ -9,9 +9,9 @@ Gem::Specification.new do |s|
   s.authors = [ "Daniel Johnston" ]
 
   s.files       = Dir['lib/*.rb'] + 
-                  Dir['ext/ctree_sdk/*.{c,rb}']
+                  Dir['ext/ctdb_sdk/*.{c,rb}']
 
-  s.extensions  = [ 'ext/ctree_sdk/extconf.rb' ]
+  s.extensions  = [ 'ext/ctdb_sdk/extconf.rb' ]
 
   s.add_development_dependency "rake-compiler"
   s.add_development_dependency "turn"
