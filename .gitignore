@@ -5,5 +5,7 @@ Makefile
 *.so
 *.gem
 tmp
-.yard
+.yardoc
 doc
+test/*.dat
+test/*.idx
