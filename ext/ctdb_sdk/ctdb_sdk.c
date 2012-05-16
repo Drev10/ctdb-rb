@@ -123,6 +123,18 @@ rb_ctdb_session_is_active(VALUE self)
 }
 
 /*
+ *
+ *
+ */
+static VALUE
+rb_ctdb_session_find_active_table(VALUE self, VALUE name)
+{
+    Check_Type(name, T_STRING);
+
+    return self;
+}
+
+/*
  * Perform a session-wide lock.
  *
  * @param [Fixnum] mode A c-treeDB lock mode.
@@ -169,17 +181,19 @@ rb_ctdb_session_is_locked(VALUE self)
  * @raise [CT::Error] ctdbLogon failed.
  */
 static VALUE 
-rb_ctdb_session_logon(int argc, VALUE *argv, VALUE self)
+rb_ctdb_session_logon(VALUE self, VALUE engine, VALUE user, VALUE password)
+// rb_ctdb_session_logon(int argc, VALUE *argv, VALUE self)
 {
-    VALUE host, user, pass;
+    Check_Type(engine, T_STRING);
+    Check_Type(user, T_STRING);
+    Check_Type(user, T_STRING);
+
     pCTHANDLE cth = CTH(self);
+    pTEXT e = RSTRING_PTR(engine);
+    pTEXT u = RSTRING_PTR(user);
+    pTEXT p = RSTRING_PTR(password);
 
-    rb_scan_args(argc, argv, "30", &host, &user, &pass);
-    char *h = RSTRING_PTR(host);
-    char *u = RSTRING_PTR(user);
-    char *p = RSTRING_PTR(pass);
-
-    if(ctdbLogon(*cth, h, u, p) != CTDBRET_OK)
+    if(ctdbLogon(*cth, e, u, p) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbLogon failed.", ctdbGetError(*cth));
 
     return self;
@@ -344,7 +358,7 @@ rb_ctdb_table_init(VALUE self, VALUE session)
  * @param [Fixnum] type Field type
  * @param [Integer] length Field length
  * @param [Hash] opts Optional field flags.
- * @options opts [Boolean] :allow_null Set the field null flag.
+ * @options opts [Boolean] :allow_nil Set the field null flag.
  * @options opts [Object] :default Set the fields default value.
  * @options opts [Fixnum] :scale The number of digits to the right of the 
  * decimal point.
@@ -352,12 +366,11 @@ rb_ctdb_table_init(VALUE self, VALUE session)
  * @raise [CT::Error]
  */
 static VALUE
-rb_ctdb_table_add_field(VALUE self, VALUE name, VALUE type, VALUE length, VALUE opts)
+rb_ctdb_table_add_field(VALUE self, VALUE name, VALUE type, VALUE length)
 {
     Check_Type(name, T_STRING);
     Check_Type(type, T_FIXNUM);
     Check_Type(length, T_FIXNUM);
-    if(!opts == Qnil) Check_Type(opts, T_HASH);
 
     pCTHANDLE cth = CTH(self);
     CTHANDLE field;
@@ -365,12 +378,7 @@ rb_ctdb_table_add_field(VALUE self, VALUE name, VALUE type, VALUE length, VALUE 
     field = ctdbAddField(*cth, RSTRING_PTR(name), FIX2INT(type), FIX2INT(length));
     if(!field) rb_raise(cCTError, "[%d] ctdbAddField failed.", ctdbGetError(*cth));
 
-    // struct* ct;
-    VALUE ct_field = rb_ctdb_field_new(cCTField, field);
-    // ct_field = Data_Make_Struct(cCTField, struct ctree, 0, free_rb_ctdb_field, ct);
-    // ct_field->handle = field;
-
-    return ct_field;
+    return rb_ctdb_field_new(cCTField, field);
 }
 
 /*
@@ -380,7 +388,7 @@ rb_ctdb_table_add_field(VALUE self, VALUE name, VALUE type, VALUE length, VALUE 
  * @param [Fixnum] type Key type
  * @param [Hash] opts
  * @options [Boolean] :allow_dups Indication if the index allows duplicate keys.
- * @options [Boolean] :allow_null Indidication if the index allows null keys.
+ * @options [Boolean] :allow_nil Indidication if the index allows null keys.
  * @raise [CT::Error] ctdbAddIndex failed.
  */
 static VALUE
@@ -394,14 +402,14 @@ rb_ctdb_table_add_index(VALUE self, VALUE name, VALUE type)/*, VALUE opts)*/
     //     rb_raise(rb_eArgError, "Unexpected value type `%s' for allow_dups", 
     //              rb_obj_classname(allow_dups));
 
-    // if(rb_type(allow_null) != T_TRUE && rb_type(allow_null) != T_FALSE)
-    //     rb_raise(rb_eArgError, "Unexpected value type `%s' for allow_null", 
-    //             rb_obj_classname(allow_null));
+    // if(rb_type(allow_nil) != T_TRUE && rb_type(allow_nil) != T_FALSE)
+    //     rb_raise(rb_eArgError, "Unexpected value type `%s' for allow_nil", 
+    //             rb_obj_classname(allow_nil));
 
     CTHANDLE index;
     pCTHANDLE cth = CTH(self);
     // CTBOOL dflag  = (rb_type(allow_dups) == T_TRUE ? YES : NO);
-    // CTBOOL nflag  = (rb_type(allow_null) == T_TRUE ? YES : NO);
+    // CTBOOL nflag  = (rb_type(allow_nil) == T_TRUE ? YES : NO);
     CTBOOL dflag = NO;
     CTBOOL nflag = YES;
 
@@ -558,7 +566,7 @@ rb_ctdb_table_get_field_by_name(VALUE self, VALUE name)
     pCTHANDLE cth = CTH(self);
     CTHANDLE field;
 
-    if((field = ctdbGetFieldByName(*cth, RSTRING_PTR(name))) != CTDBRET_OK)
+    if(!(field = ctdbGetFieldByName(*cth, RSTRING_PTR(name))))
         rb_raise(cCTError, "[%d] ctdbGetFieldByName failed.", ctdbGetError(*cth));
 
     return rb_ctdb_field_new(cCTField, field);
@@ -651,6 +659,15 @@ rb_ctdb_table_open(VALUE self, VALUE name, VALUE mode)
                 ctdbGetError(*cth), sysiocod);
 
     return self;
+}
+
+/*
+ * Retrieve the active state of a table.  A table is active if it is open.
+ */
+static VALUE
+rb_ctdb_table_is_active(VALUE self)
+{
+    return ctdbIsActiveTable(*CTH(self)) == YES ? Qtrue : Qfalse;
 }
 
 /*
@@ -756,6 +773,22 @@ rb_ctdb_field_set_default(VALUE self, VALUE value)
     return self;
 }
 
+static VALUE
+rb_ctdb_field_inspect(VALUE self)
+{
+    // pCTHANDLE cth = CTH(self);
+    // pTEXT name;
+    // 
+    // if((name = ctdbGetFieldName(*cth)) == NULL)
+    //     rb_raise(cCTError, "[%d] ctdbGetFieldName failed.", ctdbGetError(*cth));
+    // 
+    // char *n;
+    // 
+    // sprintf(, "#<CT::Field:%s>", *name);
+
+    return self;
+}
+
 /*
  * Retrieve the field length.
  *
@@ -830,6 +863,24 @@ rb_ctdb_field_set_name(VALUE self, VALUE name)
 }
 
 /*
+ * Retreive the field number in the table field list.
+ *
+ * @return [Fixnum]
+ * @raise [CT::Error] ctdbGetFieldnbr failed.
+ */
+static VALUE
+rb_ctdb_field_get_number(VALUE self)
+{
+    NINT n;
+    pCTHANDLE cth = CTH(self);
+
+    // if((n = ctdbGetFieldNbr(*cth)) == -1)
+    //     rb_raise(cCTError, "[%d] ctdbGetFieldNbr failed.", ctdbGetError(*cth));
+    n = ctdbGetFieldNbr(*cth);
+    return INT2FIX(n);
+}
+
+/*
  * Retreive the fields precision. The field precision represents the total number 
  * of digits in a BCD number.
  * 
@@ -860,6 +911,31 @@ rb_ctdb_field_set_precision(VALUE self, VALUE precision)
 }
 
 /*
+ * Retrieve field properties such as name, type and length.
+ *
+ * @return [Hash]
+ * @raise [CT::Error] ctdbGetFieldProperties failed.
+ */
+static VALUE
+rb_ctdb_field_get_properties(VALUE self)
+{
+    pCTHANDLE cth = CTH(self);
+    ppTEXT n;
+    pCTDBTYPE t;
+    pVRLEN l;
+
+    if(ctdbGetFieldProperties(*cth, n, t, l) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbGetFieldProperties failed.", ctdbGetError(*cth));
+
+    VALUE hash = rb_hash_new();
+    rb_hash_aset(hash, rb_str_new2("name"), rb_str_new2(*n));
+    rb_hash_aset(hash, rb_str_new2("type"), FIX2INT(*t));
+    rb_hash_aset(hash, rb_str_new2("length"), FIX2INT(*l));
+
+    return hash;
+}
+
+/*
  * Retrieve the field scale.  This represents the number of digits to the right
  * of the decimal point.
  *
@@ -880,7 +956,13 @@ rb_ctdb_field_set_scale(VALUE self, VALUE scale)
 static VALUE
 rb_ctdb_field_get_type(VALUE self)
 {
-    return self;
+    pCTHANDLE cth = CTH(self);
+    CTDBTYPE type;
+
+    if((type = ctdbGetFieldType(*cth)) == 0)
+        rb_raise(cCTError, "[%d] ctdbGetFieldType failed.", ctdbGetError(*cth));
+
+    return INT2FIX(type);
 }
 
 static VALUE
@@ -1062,6 +1144,15 @@ free_rb_ctdb_record(struct ctree_record* ctrec)
     free(ctrec);
 }
 
+/*
+ * Helper function for get_field_as_... calls.
+ */
+CTBOOL
+ctdb_record_is_field_null(pCTHANDLE record_ptr, NINT field_num)
+{
+    return ctdbIsNullField(*record_ptr, field_num);
+}
+
 VALUE
 rb_ctdb_record_new(VALUE klass, VALUE table)
 {
@@ -1197,12 +1288,13 @@ rb_ctdb_record_get_field_as_bool(VALUE self, VALUE num)
     Check_Type(num, T_FIXNUM);
 
     CTBOOL value;
+    NINT i = FIX2INT(num);
     pCTHANDLE cth = CTH(self);
 
-    if(ctdbGetFieldAsBool(*cth, FIX2INT(num), &value) != CTDBRET_OK)
-        rb_raise(cCTError, "[%d] ctdbGetFieldAsBool failed.", ctdbGetError(*cth));
+    if(ctdb_record_is_field_null(cth, i) == YES) return Qnil;
 
-    if(value == NULL) return Qnil;
+    if(ctdbGetFieldAsBool(*cth, i, &value) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbGetFieldAsBool failed.", ctdbGetError(*cth));
 
     return value == YES ? Qtrue : Qfalse;
 }
@@ -1220,9 +1312,12 @@ rb_ctdb_record_get_field_as_signed(VALUE self, VALUE num)
     Check_Type(num, T_FIXNUM);
 
     CTSIGNED value;
+    NINT i = FIX2INT(num);
     pCTHANDLE cth = CTH(self);
 
-    if(ctdbGetFieldAsSigned(*cth, FIX2INT(num), &value) != CTDBRET_OK)
+    if(ctdb_record_is_field_null(cth, i) == YES) return Qnil;
+
+    if(ctdbGetFieldAsSigned(*cth, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsSigned failed.", ctdbGetError(*cth));
 
     return INT2FIX(value);
@@ -1260,10 +1355,13 @@ rb_ctdb_record_get_field_as_unsigned(VALUE self, VALUE num)
 {
     Check_Type(num, T_FIXNUM);
 
-    pCTHANDLE cth = CTH(self);
     CTUNSIGNED value;
+    NINT i = FIX2INT(num);
+    pCTHANDLE cth = CTH(self);
 
-    if(ctdbGetFieldAsUnsigned(*cth, FIX2INT(num), &value) != CTDBRET_OK)
+    if(ctdb_record_is_field_null(cth, i) == YES) return Qnil;
+
+    if(ctdbGetFieldAsUnsigned(*cth, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsUnsigned failed.", ctdbGetError(*cth));
 
     return UINT2NUM(value);
@@ -1457,8 +1555,7 @@ rb_ctdb_record_set_field_as_signed(VALUE self, VALUE num, VALUE value)
     Check_Type(num, T_FIXNUM);
     pCTHANDLE cth = CTRecordH(self);
 
-    if(ctdbSetFieldAsSigned(*cth, FIX2INT(num), 
-            (CTSIGNED)FIX2INT(value)) != CTDBRET_OK)
+    if(ctdbSetFieldAsSigned(*cth, FIX2INT(num), FIX2INT(value)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldAsSigned failed.", ctdbGetError(*cth));
 
     return self;
@@ -1503,8 +1600,7 @@ rb_ctdb_record_set_field_as_unsigned(VALUE self, VALUE num, VALUE value)
 
     pCTHANDLE cth = CTRecordH(self);
 
-    if(ctdbSetFieldAsUnsigned(*cth, FIX2INT(num), 
-            (CTUNSIGNED)FIX2INT(value)) != CTDBRET_OK)
+    if(ctdbSetFieldAsUnsigned(*cth, FIX2INT(num), FIX2INT(value)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldAsUnsigned failed.", ctdbGetError(*cth));
 
     return self;
@@ -1690,17 +1786,17 @@ Init_ctdb_sdk(void)
     rb_define_const(mCT, "SESSION_CTDB",  INT2FIX(CTSESSION_CTDB));
     rb_define_const(mCT, "SESSION_CTREE", INT2FIX(CTSESSION_CTREE));
     // c-treeDB Find Modes
-    rb_define_const(mCT, "FIND_EQ", CTFIND_EQ);
-    rb_define_const(mCT, "FIND_LT", CTFIND_LT);
-    rb_define_const(mCT, "FIND_LE", CTFIND_LE);
-    rb_define_const(mCT, "FIND_GT", CTFIND_GT);
-    rb_define_const(mCT, "FIND_GE", CTFIND_GE);
+    rb_define_const(mCT, "FIND_EQ", INT2FIX(CTFIND_EQ));
+    rb_define_const(mCT, "FIND_LT", INT2FIX(CTFIND_LT));
+    rb_define_const(mCT, "FIND_LE", INT2FIX(CTFIND_LE));
+    rb_define_const(mCT, "FIND_GT", INT2FIX(CTFIND_GT));
+    rb_define_const(mCT, "FIND_GE", INT2FIX(CTFIND_GE));
     // c-treeDB Lock Modes
-    rb_define_const(mCT, "LOCK_FREE",       CTLOCK_FREE);
-    rb_define_const(mCT, "LOCK_READ",       CTLOCK_READ);
-    rb_define_const(mCT, "LOCK_READ_BLOCK", CTLOCK_READ_BLOCK);
-    rb_define_const(mCT, "LOCK_WRITE",      CTLOCK_WRITE);
-    rb_define_const(mCT, "LOCK_WRITE_LOCK", CTLOCK_WRITE_BLOCK);
+    rb_define_const(mCT, "LOCK_FREE",       INT2FIX(CTLOCK_FREE));
+    rb_define_const(mCT, "LOCK_READ",       INT2FIX(CTLOCK_READ));
+    rb_define_const(mCT, "LOCK_READ_BLOCK", INT2FIX(CTLOCK_READ_BLOCK));
+    rb_define_const(mCT, "LOCK_WRITE",      INT2FIX(CTLOCK_WRITE));
+    rb_define_const(mCT, "LOCK_WRITE_LOCK", INT2FIX(CTLOCK_WRITE_BLOCK));
     // c-treeDB Table create Modes
     rb_define_const(mCT, "CREATE_NORMAL",    INT2FIX(CTCREATE_NORMAL));
     rb_define_const(mCT, "CREATE_PREIMG",    INT2FIX(CTCREATE_PREIMG));
@@ -1724,10 +1820,19 @@ Init_ctdb_sdk(void)
     rb_define_const(mCT, "OPEN_READONLY",  INT2FIX(CTOPEN_READONLY));
     // c-treeDB Index Types
     rb_define_const(mCT, "INDEX_FIXED",   INT2FIX(CTINDEX_FIXED));
-    rb_define_const(mCT, "INDEX_LEADING", CTINDEX_LEADING);
-    rb_define_const(mCT, "INDEX_PADDING", CTINDEX_PADDING);
-    rb_define_const(mCT, "INDEX_LEADPAD", CTINDEX_LEADPAD);
-    rb_define_const(mCT, "INDEX_ERROR",   CTINDEX_ERROR);
+    rb_define_const(mCT, "INDEX_LEADING", INT2FIX(CTINDEX_LEADING));
+    rb_define_const(mCT, "INDEX_PADDING", INT2FIX(CTINDEX_PADDING));
+    rb_define_const(mCT, "INDEX_LEADPAD", INT2FIX(CTINDEX_LEADPAD));
+    rb_define_const(mCT, "INDEX_ERROR",   INT2FIX(CTINDEX_ERROR));
+    // c-treeDB Segment modes
+    rb_define_const(mCT, "SEG_SCHSEG",     INT2FIX(CTSEG_SCHSEG));
+    rb_define_const(mCT, "SET_USCHSEG",    INT2FIX(CTSEG_USCHSEG));
+    rb_define_const(mCT, "SEG_VSCHSEG",    INT2FIX(CTSEG_VSCHSEG));
+    rb_define_const(mCT, "SEG_UVSCHSEG",   INT2FIX(CTSEG_UVSCHSEG));
+    rb_define_const(mCT, "SEG_SCHSRL",     INT2FIX(CTSEG_SCHSRL));
+    rb_define_const(mCT, "SEG_DESCENDING", INT2FIX(CTSEG_DESCENDING));
+    rb_define_const(mCT, "SEG_ALTSEG",     INT2FIX(CTSEG_ALTSEG));
+    rb_define_const(mCT, "SEG_ENDSEG",     INT2FIX(CTSEG_ENDSEG));
     // c-treeDB Field Types
     rb_define_const(mCT, "BOOL",      INT2FIX(CT_BOOL));
     rb_define_const(mCT, "TINYINT",   INT2FIX(CT_TINYINT));
@@ -1757,17 +1862,17 @@ Init_ctdb_sdk(void)
     rb_define_const(mCT, "VARCHAR",   INT2FIX(CT_VARCHAR));
     rb_define_const(mCT, "LVC",       INT2FIX(CT_LVC));
     // c-ctreeDB Table alter modes
-    rb_define_const(mCT, "DB_ALTER_NORMAL",   CTDB_ALTER_NORMAL);
-    rb_define_const(mCT, "DB_ALTER_INDEX",    CTDB_ALTER_INDEX);
-    rb_define_const(mCT, "DB_ALTER_FULL",     CTDB_ALTER_FULL);
-    rb_define_const(mCT, "DB_ALTER_PURGEDUP", CTDB_ALTER_PURGEDUP);
+    rb_define_const(mCT, "DB_ALTER_NORMAL",   INT2FIX(CTDB_ALTER_NORMAL));
+    rb_define_const(mCT, "DB_ALTER_INDEX",    INT2FIX(CTDB_ALTER_INDEX));
+    rb_define_const(mCT, "DB_ALTER_FULL",     INT2FIX(CTDB_ALTER_FULL));
+    rb_define_const(mCT, "DB_ALTER_PURGEDUP", INT2FIX(CTDB_ALTER_PURGEDUP));
     // c-treeDB Table status
-    rb_define_const(mCT, "DB_REBUILD_NONE",     CTDB_REBUILD_NONE);
-    rb_define_const(mCT, "DB_REBUILD_DODA",     CTDB_REBUILD_DODA);
-    rb_define_const(mCT, "DB_REBUILD_RESOURCE", CTDB_REBUILD_RESOURCE);
-    rb_define_const(mCT, "DB_REBUILD_INDEX",    CTDB_REBUILD_INDEX);
-    rb_define_const(mCT, "DB_REBUILD_ALL",      CTDB_REBUILD_ALL);
-    rb_define_const(mCT, "DB_REBUILD_FULL",     CTDB_REBUILD_FULL);
+    rb_define_const(mCT, "DB_REBUILD_NONE",     INT2FIX(CTDB_REBUILD_NONE));
+    rb_define_const(mCT, "DB_REBUILD_DODA",     INT2FIX(CTDB_REBUILD_DODA));
+    rb_define_const(mCT, "DB_REBUILD_RESOURCE", INT2FIX(CTDB_REBUILD_RESOURCE));
+    rb_define_const(mCT, "DB_REBUILD_INDEX",    INT2FIX(CTDB_REBUILD_INDEX));
+    rb_define_const(mCT, "DB_REBUILD_ALL",      INT2FIX(CTDB_REBUILD_ALL));
+    rb_define_const(mCT, "DB_REBUILD_FULL",     INT2FIX(CTDB_REBUILD_FULL));
     // c-ctreeDB Date type
     rb_define_const(mCT, "DATE_MDCY", INT2FIX(CTDATE_MDCY)); // mm/dd/ccyy
     rb_define_const(mCT, "DATE_MDY",  CTDATE_DMCY); // mm/dd/yy
@@ -1811,10 +1916,11 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTSession, "default_date_type", rb_ctdb_get_defualt_date_type, 0);
     rb_define_method(cCTSession, "default_date_type=", rb_ctdb_set_defualt_date_type, 1);
     // rb_define_method(cCTSession, "delete_table", rb_ctdb_session_delete_table, 1);
+    rb_define_method(cCTSession, "find_active_table", rb_ctdb_session_find_active_table, 1);
     rb_define_method(cCTSession, "lock", rb_ctdb_session_lock, 1);
     rb_define_method(cCTSession, "lock!", rb_ctdb_session_lock_bang, 1);
     rb_define_method(cCTSession, "locked?", rb_ctdb_session_is_locked, 0);
-    rb_define_method(cCTSession, "logon", rb_ctdb_session_logon, -1);
+    rb_define_method(cCTSession, "logon", rb_ctdb_session_logon, 3);
     rb_define_method(cCTSession, "logout", rb_ctdb_session_logout, 0);
     rb_define_method(cCTSession, "password", rb_ctdb_session_get_password, 0);
     rb_define_method(cCTSession, "path_prefix", rb_ctdb_session_get_path_prefix, 0);
@@ -1845,6 +1951,9 @@ Init_ctdb_sdk(void)
     // rb_define_method(cCTTable, "index", rb_ctdb_table_get_index, 1);
     rb_define_method(cCTTable, "name", rb_ctdb_table_get_name, 0);
     rb_define_method(cCTTable, "open", rb_ctdb_table_open, 2);
+    rb_define_method(cCTTable, "active?", rb_ctdb_table_is_active, 0);
+    rb_define_alias(cCTTable, "open?", "active?");
+    
     rb_define_method(cCTTable, "pad_char", rb_ctdb_table_get_pad_char, 0);
     rb_define_method(cCTTable, "path", rb_ctdb_table_get_path, 0);
     rb_define_method(cCTTable, "path=", rb_ctdb_table_set_path, 1);
@@ -1856,12 +1965,15 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTField, "allow_nil?", rb_ctdb_field_get_null_flag, 0);
     rb_define_method(cCTField, "default", rb_ctdb_field_get_default, 0);
     rb_define_method(cCTField, "default=", rb_ctdb_field_set_default, 1);
+    rb_define_method(cCTField, "inspect", rb_ctdb_field_inspect, 0);
     rb_define_method(cCTField, "length", rb_ctdb_field_get_length, 0);
     rb_define_method(cCTField, "length=", rb_ctdb_field_set_length, 1);
     rb_define_method(cCTField, "name", rb_ctdb_field_get_name, 0);
     rb_define_method(cCTField, "name=", rb_ctdb_field_set_name, 1);
+    rb_define_method(cCTField, "number", rb_ctdb_field_get_number, 0);
     rb_define_method(cCTField, "precision", rb_ctdb_field_get_precision, 0);
     rb_define_method(cCTField, "precision=", rb_ctdb_field_set_precision, 1);
+    rb_define_method(cCTField, "properties", rb_ctdb_field_get_properties, 0);
     rb_define_method(cCTField, "scale", rb_ctdb_field_get_scale, 0);
     rb_define_method(cCTField, "scale=", rb_ctdb_field_set_scale, 1);
     rb_define_method(cCTField, "type", rb_ctdb_field_get_type, 0);
