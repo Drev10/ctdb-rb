@@ -6,7 +6,7 @@ Rake::ExtensionTask.new('ctdb_sdk')
 
 desc "Build the RubyGem."
 task :build do
-  `gem build ctree.gemspec`
+  `gem build ctdb.gemspec`
 end
 
 desc "Tag the project with the current version."
