@@ -4,6 +4,11 @@ require 'yard'
 
 Rake::ExtensionTask.new('ctdb_sdk')
 
+desc "Start the guard process."
+task :guard do
+  `bundle exec guard start`
+end
+
 desc "Build the RubyGem."
 task :build do
   `gem build ctdb.gemspec`
