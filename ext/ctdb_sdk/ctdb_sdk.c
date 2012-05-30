@@ -489,9 +489,9 @@ rb_ctdb_table_create(VALUE self, VALUE name, VALUE mode)
 static VALUE rb_ctdb_table_get_delim_char(VALUE self)
 {
     pCTHANDLE cth = CTH(self);
-    pTEXT dchar;
+    TEXT dchar;
 
-    if(ctdbGetPadChar(*cth, NULL, dchar) != CTDBRET_OK)
+    if(ctdbGetPadChar(*cth, NULL, &dchar) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetPadChar failed.", ctdbGetError(*cth));
 
     return rb_str_new_cstr(dchar);
@@ -693,9 +693,9 @@ static VALUE
 rb_ctdb_table_get_pad_char(VALUE self)
 {
     pCTHANDLE cth = CTH(self);
-    pTEXT pchar;
+    TEXT pchar;
 
-    if(ctdbGetPadChar(*cth, pchar, NULL) != CTDBRET_OK)
+    if(ctdbGetPadChar(*cth, &pchar, NULL) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetPadChar failed.", ctdbGetError(*cth));
 
     return rb_str_new_cstr(pchar);
@@ -1689,7 +1689,7 @@ rb_ctdb_record_prev(VALUE self)
 static VALUE
 rb_ctdb_record_set_default_index(VALUE self, VALUE identifier)
 {
-    pCTHANDLE cth = *CTRecord(self)->table_ptr;
+    pCTHANDLE cth = CTH(self);
     CTDBRET rc;
 
     switch(rb_type(identifier)){
@@ -1709,7 +1709,7 @@ rb_ctdb_record_set_default_index(VALUE self, VALUE identifier)
     if(rc != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetDefaultIndex failed.", ctdbGetError(*cth));
 
-    return Qtrue;
+    return self;
 }
 
 // static VALUE
