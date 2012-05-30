@@ -4,6 +4,7 @@ Makefile
 *.bundle
 *.so
 *.gem
+*.log
 tmp
 .yardoc
 doc
