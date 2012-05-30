@@ -52,12 +52,13 @@ class TestCTTable < Test::Unit::TestCase
       @table.path = _c[:table_path]
       @table.open(_c[:table_name], CT::OPEN_NORMAL)
     end
-    assert_nothing_raised { @field = @table.get_field_by_name("t_uinteger") }
+    assert_nothing_raised { @field = @table.get_field("t_uinteger") }
     assert_instance_of(CT::Field, @field)
     assert_nothing_raised do 
       @index = @table.add_index(_c[:index_name], CT::INDEX_FIXED)
     end
     assert_instance_of(CT::Index, @index)
+    assert_nothing_raised { @index.allow_dups = false }
     assert_nothing_raised { @index.add_segment(@field, CT::SEG_SCHSRL) }
     assert_nothing_raised { @table.alter(CT::DB_ALTER_NORMAL) }
     assert_nothing_raised { @table.close }
