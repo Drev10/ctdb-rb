@@ -1,34 +1,27 @@
 #include "ruby.h"
 #include "ctdbsdk.h" /* c-tree headers */
 
+#define RUBY_CLASS(name) rb_const_get(rb_cObject, rb_intern(name))
+
 #define CTH(obj) \
     (Check_Type(obj, T_DATA), &(((struct ctree*)DATA_PTR(obj))->handle))
 #define CTRecord(obj) \
     (Check_Type(obj, T_DATA), (struct ctree_record*)DATA_PTR(obj))
 #define CTRecordH(obj) \
     (Check_Type(obj, T_DATA), &(((struct ctree_record*)DATA_PTR(obj))->handle))
-// #define CTType(obj) \
-//     (Check_Type(obj, T_DATA), &(((struct ctree_type*)DATA_PTR(obj))->val))
-#define CTDate(obj) \
-    (Check_Type(obj, T_DATA), (struct ctree_date*)DATA_PTR(obj))
-    // (Check_Type(obj, T_DATA), (((struct ctree_date*)DATA_PTR(obj))->val)))
 
+/*
+ * Generic structure for storing c-tree resources
+ */
 struct ctree {
     CTHANDLE handle;
 };
-
+/*
+ * Custom container for CT::Record resources.
+ */
 struct ctree_record {
     CTHANDLE handle;
     pCTHANDLE table_ptr;
-};
-
-/* TODO: Refactor CT types to use one structure */
-// struct ctree_type {
-//     void *val;
-// };
-
-struct ctree_date {
-    CTDATE val;
 };
 
 VALUE mCT;
@@ -39,7 +32,6 @@ VALUE cCTIndex;    // CT::Index
 VALUE cCTSegment;  // CT::Segment
 VALUE cCTRecord;   // CT::Record
 VALUE cCTField;    // CT::Field
-VALUE cCTDate;     // CT::Date
 
 // TODO: #define rb_define_ct_const(s, c) rb_define_const(mCT, #s, INT2NUM(c))
 
@@ -494,7 +486,7 @@ static VALUE rb_ctdb_table_get_delim_char(VALUE self)
     if(ctdbGetPadChar(*cth, NULL, &dchar) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetPadChar failed.", ctdbGetError(*cth));
 
-    return rb_str_new_cstr(dchar);
+    return rb_str_new_cstr(&dchar);
 }
 
 /*
@@ -558,7 +550,7 @@ rb_ctdb_table_get_fields(VALUE self)
 
         VALUE ct_field = rb_ctdb_field_new(cCTField, field);
         if(rb_block_given_p()) rb_yield(ct_field);
-        rb_ary_store(fields, i, rb_str_new_cstr(ct_field));
+        rb_ary_store(fields, i, ct_field);
     }
 
     return fields;
@@ -698,7 +690,7 @@ rb_ctdb_table_get_pad_char(VALUE self)
     if(ctdbGetPadChar(*cth, &pchar, NULL) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetPadChar failed.", ctdbGetError(*cth));
 
-    return rb_str_new_cstr(pchar);
+    return rb_str_new_cstr(&pchar);
 }
 
 /*
@@ -1416,11 +1408,6 @@ rb_ctdb_record_get_field_as_bool(VALUE self, VALUE id)
             break;
     }
 
-    // if(ctdb_record_is_field_null(cth, i) == YES){
-    //     printf("its nil\n");
-    //     return Qnil;
-    // } 
-
     CTBOOL value;
     if(ctdbGetFieldAsBool(*cth, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsBool failed.", ctdbGetError(*cth));
@@ -1437,8 +1424,37 @@ rb_ctdb_record_get_field_as_bool(VALUE self, VALUE id)
 static VALUE
 rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
 {
-    // TODO: rb_ctdb_record_get_field_as_date
-    return self;
+    pCTHANDLE cth = CTH(self);
+    NINT i; // Field number
+
+    switch(rb_type(id)){
+        case T_STRING :
+            if((i = ctdbGetFieldNumberByName(*cth, RSTRING_PTR(id))) == -1)
+                rb_raise(cCTError, "[%d] ctdbGetFieldNumberByName failed.", 
+                    ctdbGetError(*cth));
+            break;
+        case T_FIXNUM :
+            i = FIX2INT(id);
+            break;
+        default:
+            rb_raise(rb_eArgError, "Unexpected value type `%s'",
+                rb_obj_classname(id));
+            break;
+    }
+
+    CTDATE value;
+    if(ctdbGetFieldAsDate(*cth, i, &value) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", ctdbGetError(*cth));
+
+    NINT y, m, d;
+    CTDBRET rc = ctdbDateUnpack(value, &y, &m, &d);
+    if(rc != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbDateUnpack failed.", rc);
+
+    VALUE rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
+            INT2FIX(y), INT2FIX(m), INT2FIX(d));
+
+    return rbdt;
 }
 
 /*
@@ -1552,6 +1568,50 @@ rb_ctdb_record_get_field_as_string(VALUE self, VALUE id)
                 ctdbGetError(ct->handle));
 
     return rb_str_new_cstr(value);
+}
+
+/*
+ *
+ *
+ */
+static VALUE
+rb_ctdb_record_get_field_as_time(VALUE self, VALUE id)
+{
+    struct ctree_record *ct = CTRecord(self);
+    NINT i; // Field number
+
+    switch(rb_type(id)){
+        case T_STRING :
+            if((i = ctdbGetFieldNumberByName(ct->handle, RSTRING_PTR(id))) == -1)
+                rb_raise(cCTError, "[%d] ctdbGetFieldNumberByName failed.", 
+                    ctdbGetError(ct->handle));
+            break;
+        case T_FIXNUM :
+            i = FIX2INT(id);
+            break;
+        default:
+            rb_raise(rb_eArgError, "Unexpected value type `%s'",
+                rb_obj_classname(id));
+            break;
+    }
+
+    CTTIME value;
+    if(ctdbGetFieldAsTime(ct->handle, i, &value) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbGetFieldAsTime failed.", 
+                ctdbGetError(ct->handle));
+
+    NINT h, m, s;
+    CTDBRET rc = ctdbTimeUnpack(value, &h, &m, &s);
+    if(rc != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbTimeUnpack failed.", rc);
+
+    // VALUE rbtm = rb_funcall(RUBY_CLASS("Time"), rb_intern("new"), 3, 
+    //         INT2FIX(h), INT2FIX(m), INT2FIX(s));
+    // 
+    // return rbtm;
+
+    // TODO: rb_ctdb_record_get_field_as_time
+    return self;
 }
 
 /*
@@ -1765,6 +1825,7 @@ rb_ctdb_record_set_field_as_bool(VALUE self, VALUE id, VALUE value)
  *
  *
  * @param [Fixnum, String] id Field number or name.
+ * @param [Date] value
  */
 static VALUE
 rb_ctdb_record_set_field_as_date(VALUE self, VALUE id, VALUE value)
@@ -1787,7 +1848,16 @@ rb_ctdb_record_set_field_as_date(VALUE self, VALUE id, VALUE value)
             break;
     }
 
-    if(ctdbSetFieldAsDate(*cth, i, CTDate(value)->val) != CTDBRET_OK)
+    CTDATE ctdate;
+    CTDBRET rc = ctdbDatePack(&ctdate, 
+            FIX2INT(rb_funcall(value, rb_intern("year"), 0)), 
+            FIX2INT(rb_funcall(value, rb_intern("month"), 0)), 
+            FIX2INT(rb_funcall(value, rb_intern("day"), 0)));
+
+    if(rc != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbDatePack failed.", rc);
+
+    if(ctdbSetFieldAsDate(*cth, i, ctdate) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldAsDate failed.", ctdbGetError(*cth));
 
     return self;
@@ -1922,8 +1992,47 @@ rb_ctdb_record_set_field_as_string(VALUE self, VALUE id, VALUE value)
     return self;
 }
 
-// static VALUE
-// rb_ctdb_record_set_field_as_time(VALUE self, VALUE num, VALUE value){}
+/*
+ *
+ *
+ * @param [Fixnum, String] id Field number or name.
+ * @param [Time] value
+ */
+static VALUE
+rb_ctdb_record_set_field_as_time(VALUE self, VALUE id, VALUE value)
+{
+    NINT i;
+    struct ctree_record *ct = CTRecord(self);
+    TEXT fname;
+    CTHANDLE f;
+
+    switch(rb_type(id)){
+        case T_STRING :
+            if((i = ctdbGetFieldNumberByName(ct->handle, RSTRING_PTR(id))) == -1)
+                rb_raise(cCTError, "[%d] ctdbGetFieldNumberByName failed.", 
+                    ctdbGetError(ct->handle));
+            break;
+        case T_FIXNUM :
+            i = FIX2INT(id);
+            break;
+        default:
+            rb_raise(rb_eArgError, "Unexpected value type `%s'",
+                rb_obj_classname(id));
+            break;
+    }
+
+    CTDATE cttime;
+    CTDBRET rc = ctdbTimePack(&cttime,
+            FIX2INT(rb_funcall(value, rb_intern("hour"), 0)), 
+            FIX2INT(rb_funcall(value, rb_intern("min"), 0)), 
+            FIX2INT(rb_funcall(value, rb_intern("sec"), 0)));
+
+    if(ctdbSetFieldAsTime(ct->handle, i, cttime) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbSetFieldAsTime failed.", 
+                ctdbGetError(ct->handle));
+
+    return self;
+}
 
 /*
  *
@@ -1964,6 +2073,59 @@ rb_ctdb_record_set_field_as_unsigned(VALUE self, VALUE id, VALUE value)
 // rb_ctdb_record_set_field_as_utf16(VALUE self, VALUE num, VALUE value){}
 
 /*
+ * Indicates if record set is active or not.
+ */
+static VALUE
+rb_ctdb_record_is_set(VALUE self)
+{
+    return ctdbIsRecordSetOn(CTRecordH(self)) == YES ? Qtrue : Qfalse;
+}
+
+/*
+ * Enable a new record set.  The target key is build from the contents of the 
+ * record buffer.
+ */
+static VALUE
+rb_ctdb_record_set_on(VALUE self)
+{
+    struct ctree_record *ctrec = CTRecord(self);
+    CTHANDLE ndx;
+    NINT i;
+    VRLEN len;
+
+    if((i = ctdbGetDefaultIndex(ctrec->handle)) == -1)
+        rb_raise(cCTError, "[%d] ctdbGetDefaultIndex failed.", 
+                ctdbGetError(ctrec->handle));
+
+    if((ndx = ctdbGetIndex(*ctrec->table_ptr, i)) == NULL)
+        rb_raise(cCTError, "[%d] ctdbGetIndex failed.",
+                ctdbGetError(ctrec->handle));
+
+    if((len = ctdbGetIndexKeyLength(ndx)) == -1)
+        rb_raise(cCTError, "[%d] ctdbGetIndexKeyLength failed.", 
+                ctdbGetError(ctrec->handle));
+
+    if(ctdbRecordSetOn(ctrec->handle, len) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbRecordSetOn failed.", 
+                ctdbGetError(ctrec->handle));
+
+    return self;
+}
+
+/*
+ * Disable and free an existing record set.
+ */
+static VALUE
+rb_ctdb_record_set_off(VALUE self)
+{
+    pCTHANDLE cth = CTRecordH(self);
+
+    if(ctdbRecordSetOff(*cth) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbRecordSetOff failed.", ctdbGetError(*cth));
+
+    return self;
+}
+/*
  * Create or update an existing record.
  *
  * @raise [CT::Error] ctdbWriteRecord failed.
@@ -1977,161 +2139,6 @@ rb_ctdb_record_write_bang(VALUE self)
         rb_raise(cCTError, "[%d] ctdbWriteRecord failed.", ctdbGetError(*cth));
 
     return self;
-}
-
-// ============
-// = CT::Date =
-// ============
-static void
-free_rb_ctdb_date(struct ctree_date* ct)
-{
-    free(ct);
-}
-
-/*
- *
- *
- * @param [Fixnum] year
- * @param [Fixnum] month
- * @param [Fixnum] day
- * @raise [CT::Error] ctdbDatePack failed.
- */
-VALUE
-rb_ctdb_date_new(VALUE klass, VALUE year, VALUE month, VALUE day)
-{
-    Check_Type(year, T_FIXNUM);
-    Check_Type(month, T_FIXNUM);
-    Check_Type(day, T_FIXNUM);
-
-    NINT y = FIX2INT(year);
-    NINT m = FIX2INT(month);
-    NINT d = FIX2INT(day);
-
-    struct ctree_date *ct;
-    VALUE obj = Data_Make_Struct(klass, struct ctree_date, 0, free_rb_ctdb_date, ct);
-
-    if(ctdbDatePack(&ct->val, y, m, d) != CTDBRET_OK)
-        rb_raise(cCTError, "ctdbDatePack failed.");
-
-    VALUE argv[3] = { year, month, day };
-    rb_obj_call_init(obj, 3, argv); // CT::Date.initialize(y,m,d)
-
-    return obj;
-}
-
-static VALUE
-rb_ctdb_date_init(VALUE self, VALUE year, VALUE month, VALUE day)
-{
-    return self;
-}
-
-/*
- * Retrieve the current date.
- *
- * @return [CT::Date]
- * @raise [CT::Error] ctdbCurrentDate or ctdbDateUnpack failed.
- */
-static VALUE
-rb_ctdb_date_get_today(VALUE klass)
-{
-    CTDATE date;
-
-    if(ctdbCurrentDate(&date) != CTDBRET_OK)
-        rb_raise(cCTError, "ctdbCurrentDate failed.");
-
-    NINT y, m, d;
-    if(ctdbDateUnpack(date, &y, &m, &d) != CTDBRET_OK)
-        rb_raise(cCTError, "ctdbDateUnpack failed.");
-
-    return rb_ctdb_date_new(cCTDate, INT2FIX(y), INT2FIX(m), INT2FIX(d));
-}
-
-/*
- *
- *
- * @return [Fixnum]
- */
-static VALUE
-rb_ctdb_date_get_day(VALUE self)
-{
-    NINT day = ctdbGetDay(CTDate(self)->val);
-    return INT2FIX(day);
-}
-
-/*
- *
- *
- * @return [Fixnum]
- */
-static VALUE
-rb_ctdb_date_get_day_of_week(VALUE self)
-{
-    NINT day = ctdbDayOfWeek(CTDate(self)->val);
-    return INT2FIX(day);
-}
-
-static VALUE
-rb_ctdb_date_is_leap_year(VALUE self)
-{
-    return ctdbIsLeapYear(CTDate(self)->val) == YES ? Qtrue : Qfalse;
-}
-
-/*
- *
- *
- * @return [Fixnum]
- */
-static VALUE
-rb_ctdb_date_get_month(VALUE self)
-{
-    NINT month = ctdbGetMonth(CTDate(self)->val);
-    return INT2FIX(month);
-}
-
-/*
- *
- *
- */
-static VALUE
-rb_ctdb_date_strftime(VALUE self, VALUE format)
-{
-    // TODO: rb_ctdb_date_strftime
-    Check_Type(format, T_FIXNUM);
-
-    // pTEXT str;
-    // CTDBRET rc;
-    // VRLEN buf = 11;
-    // 
-    // if((rc = ctdbDateToString(CTDate(self)->val, FIX2INT(format), *&str, buf)) != CTDBRET_OK)
-    //     rb_raise(cCTError, "[%d] ctdbDateToString failed.", rc);
-    // 
-    // printf("[%d]\n", __LINE__);
-    // 
-    // return rb_str_new_cstr(str);
-    return self;
-}
-
-/*
- *
- *
- */
-static VALUE
-rb_ctdb_date_strptime(VALUE self, VALUE string, VALUE format)
-{
-    // TODO: rb_ctdb_date_strptime
-    return self;
-}
-
-/*
- *
- *
- * @return [Fixnum]
- */
-static VALUE
-rb_ctdb_date_get_year(VALUE self)
-{
-    NINT year = ctdbGetYear(CTDate(self)->val);
-    return INT2FIX(year);
 }
 
 void 
@@ -2229,38 +2236,6 @@ Init_ctdb_sdk(void)
     rb_define_const(mCT, "DB_REBUILD_INDEX",    INT2FIX(CTDB_REBUILD_INDEX));
     rb_define_const(mCT, "DB_REBUILD_ALL",      INT2FIX(CTDB_REBUILD_ALL));
     rb_define_const(mCT, "DB_REBUILD_FULL",     INT2FIX(CTDB_REBUILD_FULL));
-    // c-ctreeDB Date type
-    rb_define_const(mCT, "DATE_MDCY", INT2FIX(CTDATE_MDCY)); // mm/dd/ccyy
-    rb_define_const(mCT, "DATE_MDY",  CTDATE_DMCY); // mm/dd/yy
-    rb_define_const(mCT, "DATE_DMCY", CTDATE_DMCY); // dd/mm/ccyy
-    rb_define_const(mCT, "DATE_DMY",  CTDATE_DMY);  // dd/mm/yy
-    rb_define_const(mCT, "DATE_CYMD", CTDATE_CYMD); // ccyymmdd
-    rb_define_const(mCT, "DATE_YMD",  CTDATE_YMD);  // yymmdd
-
-    // c-ctreeDB Date regular expressions
-    const char* date_mdcy_regex = "^ *(0[1-9]|1[0-2])/\\d{2}/\\d{4}$";
-    rb_define_const(mCT, "DATE_MDCY_REGEX", 
-                    rb_reg_new(date_mdcy_regex, strlen(date_mdcy_regex), 0));
-
-    const char* date_mdy_regex = "^ *(0[1-9]|1[0-2])(/|-)((0[1-9])|((1|2)[0-9])|(3[0-1]))(/|-)[0-9]{2} *$";
-    rb_define_const(mCT, "DATE_MDY_REGEX", 
-                    rb_reg_new(date_mdy_regex, strlen(date_mdy_regex), 0));
-
-    const char* date_dmcy_regex = "^ *(0[1-3]|[1-3][0-9])/(0[1-9]|1[0-2])/[1-2]\\d{2}$";
-    rb_define_const(mCT, "DATE_DMCY_REGEX", 
-                    rb_reg_new(date_dmcy_regex, strlen(date_dmcy_regex), 0));
-
-    const char* date_dmy_regex = "^[0-3][0-9]/(0[1-9]|1[0-2])/\\d{2}$";
-    rb_define_const(mCT, "DATE_DMY_REGEX",
-                    rb_reg_new(date_dmy_regex, strlen(date_dmy_regex), 0));
-
-    const char* date_cymd_regex = "^\\d{8}$"; 
-    rb_define_const(mCT, "DATE_CYMD_REGEX",
-                    rb_reg_new(date_cymd_regex, strlen(date_cymd_regex), 0));
-
-    const char* date_ymd_regex = "^[0-9]{6}$";
-    rb_define_const(mCT, "DATE_YMD_REGEX",
-                    rb_reg_new(date_ymd_regex, strlen(date_ymd_regex), 0));
 
     // CT::Error
     cCTError = rb_define_class_under(mCT, "Error", rb_eStandardError);
@@ -2376,9 +2351,11 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "first", rb_ctdb_record_first, 0);
     rb_define_method(cCTRecord, "first!", rb_ctdb_record_first_bang, 0);
     rb_define_method(cCTRecord, "get_field_as_bool", rb_ctdb_record_get_field_as_bool, 1);
+    rb_define_method(cCTRecord, "get_field_as_date", rb_ctdb_record_get_field_as_date, 1);
     rb_define_method(cCTRecord, "get_field_as_float", rb_ctdb_record_get_field_as_float, 1);
     rb_define_method(cCTRecord, "get_field_as_signed", rb_ctdb_record_get_field_as_signed, 1);
     rb_define_method(cCTRecord, "get_field_as_string", rb_ctdb_record_get_field_as_string, 1);
+    rb_define_method(cCTRecord, "get_field_as_time", rb_ctdb_record_get_field_as_time, 1);
     rb_define_method(cCTRecord, "get_field_as_unsigned", rb_ctdb_record_get_field_as_unsigned, 1);
     rb_define_method(cCTRecord, "last", rb_ctdb_record_last, 0);
     rb_define_method(cCTRecord, "last!", rb_ctdb_record_last_bang, 0);
@@ -2386,25 +2363,16 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "lock!", rb_ctdb_record_lock_bang, 1);
     rb_define_method(cCTRecord, "next", rb_ctdb_record_next, 0);
     rb_define_method(cCTRecord, "prev", rb_ctdb_record_prev, 0);
-    // rb_define_method(cCTRecord, "set_field", rb_ctdb_record_set_field, 2);
     rb_define_method(cCTRecord, "set_field_as_bool", rb_ctdb_record_set_field_as_bool, 2);
     rb_define_method(cCTRecord, "set_field_as_date", rb_ctdb_record_set_field_as_date, 2);
     rb_define_method(cCTRecord, "set_field_as_float", rb_ctdb_record_set_field_as_float, 2);
     rb_define_method(cCTRecord, "set_field_as_signed", rb_ctdb_record_set_field_as_signed, 2);
     rb_define_method(cCTRecord, "set_field_as_string", rb_ctdb_record_set_field_as_string, 2);
+    rb_define_method(cCTRecord, "set_field_as_time", rb_ctdb_record_set_field_as_time, 2);
     rb_define_method(cCTRecord, "set_field_as_unsigned", rb_ctdb_record_set_field_as_unsigned, 2);
+    rb_define_method(cCTRecord, "set?", rb_ctdb_record_is_set, 0);
+    rb_define_method(cCTRecord, "set_on", rb_ctdb_record_set_on, 0);
+    rb_define_method(cCTRecord, "set_off", rb_ctdb_record_set_off, 0);
     rb_define_method(cCTRecord, "write!", rb_ctdb_record_write_bang, 0);
 
-    // CT::Date
-    cCTDate = rb_define_class_under(mCT, "Date", rb_cObject);
-    rb_define_singleton_method(cCTDate, "new", rb_ctdb_date_new, 3);
-    rb_define_singleton_method(cCTDate, "today", rb_ctdb_date_get_today, 0);
-    rb_define_method(cCTDate, "initialize", rb_ctdb_date_init, 3);
-    rb_define_method(cCTDate, "day", rb_ctdb_date_get_day, 0);
-    rb_define_method(cCTDate, "day_of_week", rb_ctdb_date_get_day_of_week, 0);
-    rb_define_method(cCTDate, "leap_year?", rb_ctdb_date_is_leap_year, 0);
-    rb_define_method(cCTDate, "month", rb_ctdb_date_get_month, 0);
-    rb_define_method(cCTDate, "strftime", rb_ctdb_date_strftime, 1);
-    rb_define_method(cCTDate, "strptime", rb_ctdb_date_strptime, 2);
-    rb_define_method(cCTDate, "year", rb_ctdb_date_get_year, 0);
 }
