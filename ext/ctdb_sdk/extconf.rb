@@ -19,8 +19,15 @@ EOS
   exit
 end
 
-ct_dir = with_config('faircom-dir')
-api_dir  = %w(ctree.ctdb multithreaded dynamic).join(File::SEPARATOR)
+ct_dir   = with_config('faircom-dir')
+api_dir  = case RUBY_PLATFORM
+when /darwin/ then %w(ctree.ctdb multithreaded static).join(File::SEPARATOR)
+when /linux/  then %w(ctree.ctdb multithreaded dynamic).join(File::SEPARATOR)
+else
+  puts "Unhandled platform `#{RUBY_PLATFORM}'"
+  exit 1
+end
+ 
 lib      = "mtclient"
 lib_dir  = File.join(ct_dir, 'lib', api_dir)
 inc_dirs = [ File.join(ct_dir, 'include', 'sdk', api_dir),
@@ -30,6 +37,7 @@ inc_dirs.each do |path|
   $INCFLAGS << " -I#{path}"
 end
 $LIBPATH  << "#{lib_dir}"
+$CFLAGS   << " -fPIC"
 
 errors = []
 errors << "'ctdbsdk.h'" unless have_header('ctdbsdk.h')
