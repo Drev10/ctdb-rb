@@ -37,7 +37,7 @@ record.set_default_index("foo_ndx")
 record.set_field_as_unsigned('id', 123)
 record.find(CT::FIND_EQ)
 
-puts record.get_field_as_unsigned('id) # => 123
+puts record.get_field_as_unsigned('id') # => 123
 ```
 
 
