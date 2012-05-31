@@ -5,6 +5,9 @@ Gem::Specification.new do |s|
   s.version  = "#{CT::Version}"
   s.platform = Gem::Platform::RUBY
   s.summary  = "FairCom c-treeDB ruby SDK"
+  s.description = "No fluff c extension implementing the ctdb sdk."
+  s.homepage = "https://github.adfitech.com/dan/rb-ctdb"
+  s.email    = "it@adfitech.com"
 
   s.authors = [ "Daniel Johnston" ]
 
