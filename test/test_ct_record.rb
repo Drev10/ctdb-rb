@@ -29,8 +29,8 @@ class TestCTRecord < Test::Unit::TestCase
     assert_nothing_raised { @r0.set_field_as_signed('t_integer', x['t_integer']) }
     assert_nothing_raised { @r0.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
     # assert_nothing_raised { @r0.set_field_as_money('t_money', x['t_uinteger']) }
-    # assert_nothing_raised { @r0.set_field_as_date('t_date', x['t_date']) }
-    # assert_nothing_raised {  t_time:  }
+    assert_nothing_raised { @r0.set_field_as_date('t_date', x['t_date']) }
+    assert_nothing_raised { @r0.set_field_as_time('t_time', x['t_time']) }
     # assert_nothing_raised { @r0.set_field_as_float('t_float', x['t_float']) }
     # assert_nothing_raised {  t_double: }
     # assert_nothing_raised {  t_timestamp: }
@@ -60,7 +60,7 @@ class TestCTRecord < Test::Unit::TestCase
     assert_nothing_raised { @r1.set_field_as_signed('t_integer', x['t_integer']) }
     assert_nothing_raised { @r1.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
     # assert_nothing_raised { @r1.set_field_as_money('t_money', x['t_uinteger']) }
-    # assert_nothing_raised { @r1.set_field_as_date('t_date', x['t_date']) }
+    assert_nothing_raised { @r1.set_field_as_date('t_date', x['t_date']) }
     # assert_nothing_raised {  t_time:  }
     # assert_nothing_raised { @r1.set_field_as_float('t_float', x['t_float']) }
     # assert_nothing_raised {  t_double: }
@@ -91,7 +91,7 @@ class TestCTRecord < Test::Unit::TestCase
     assert_nothing_raised { @r2.set_field_as_signed('t_integer', x['t_integer']) }
     assert_nothing_raised { @r2.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
     # assert_nothing_raised { @r2.set_field_as_money('t_money', x['t_uinteger']) }
-    # assert_nothing_raised { @r2.set_field_as_date('t_date', x['t_date']) }
+    assert_nothing_raised { @r2.set_field_as_date('t_date', x['t_date']) }
     # assert_nothing_raised {  t_time:  }
     # assert_nothing_raised { @r2.set_field_as_float('t_float', x['t_float']) }
     # assert_nothing_raised {  t_double: }
@@ -123,6 +123,7 @@ class TestCTRecord < Test::Unit::TestCase
     assert_nothing_raised { @rec.find(CT::FIND_EQ) }
     assert_equal(x['t_uinteger'], @rec.get_field_as_unsigned('t_uinteger'))
     assert_equal(x['t_varchar'],  @rec.get_field_as_string('t_varchar'))
+    
   end
 
   def test_find_first
@@ -142,7 +143,7 @@ class TestCTRecord < Test::Unit::TestCase
     assert_equal(x['t_integer'],   @rec.get_field_as_signed('t_integer'))
     assert_equal(x['t_uinteger'],  @rec.get_field_as_unsigned('t_uinteger'))
     # t_money: "1,000.00"
-    # t_date: "01/10/1984"
+    assert_equal(x['t_date'],      @rec.get_field_as_date('t_date'))
     # t_time: 
     # t_float: 2.75
     # t_double:
