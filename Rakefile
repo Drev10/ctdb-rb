@@ -20,6 +20,9 @@ task :tag do
 end
 
 task :publish => [:tag, :build] do
+  sh("git push origin master")
+  sh("git push git@github.adfitech.com:dan/rb-ctdb.git v#{CT::Version}")
+  sh("gem inabox ctdb-#{CT::Version}.gem")
 end
 
 desc "Compile and run the test fixture program."
