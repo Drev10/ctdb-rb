@@ -7,7 +7,7 @@ A no fluff extension implementing the FairCom c-tree ctdb sdk.
 Make sure you have our internal gem repository added to your gem sources.
 
     $ gem sources -a http://gems.devl.adfitech.com # optional
-    $ gem install ctdb
+    $ gem install ctdb -- --with-faircom-dir=/prod/to/c-treeACE
 
 ### Session
 
