@@ -2506,6 +2506,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "first", rb_ctdb_record_first, 0);
     rb_define_method(cCTRecord, "first!", rb_ctdb_record_first_bang, 0);
     rb_define_method(cCTRecord, "get_field", rb_ctdb_record_get_field, 1);
+    rb_define_alias(cCTRecord,  "[]", "get_field");
     rb_define_method(cCTRecord, "get_field_as_bool", rb_ctdb_record_get_field_as_bool, 1);
     rb_define_method(cCTRecord, "get_field_as_date", rb_ctdb_record_get_field_as_date, 1);
     rb_define_method(cCTRecord, "get_field_as_float", rb_ctdb_record_get_field_as_float, 1);
@@ -2520,6 +2521,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "next", rb_ctdb_record_next, 0);
     rb_define_method(cCTRecord, "prev", rb_ctdb_record_prev, 0);
     rb_define_method(cCTRecord, "set_field", rb_ctdb_record_set_field, 2);
+    rb_define_alias(cCTRecord,  "[]=", "set_field");
     rb_define_method(cCTRecord, "set_field_as_bool", rb_ctdb_record_set_field_as_bool, 2);
     rb_define_method(cCTRecord, "set_field_as_date", rb_ctdb_record_set_field_as_date, 2);
     rb_define_method(cCTRecord, "set_field_as_float", rb_ctdb_record_set_field_as_float, 2);
@@ -2531,5 +2533,4 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "set_on", rb_ctdb_record_set_on, 0);
     rb_define_method(cCTRecord, "set_off", rb_ctdb_record_set_off, 0);
     rb_define_method(cCTRecord, "write!", rb_ctdb_record_write_bang, 0);
-
 }
