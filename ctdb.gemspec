@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/lib/ctdb'
+require File.dirname(__FILE__) + '/lib/ctdb/version'
 
 Gem::Specification.new do |s|
   s.name     = "ctdb"

@@ -129,6 +129,39 @@ rb_ctdb_session_find_active_table(VALUE self, VALUE name)
 }
 
 /*
+ *static VALUE
+ *rb_ctdb_session_find_table(VALUE self, VALUE name)
+ *{
+ *    Check_Type(name, T_STRING);
+ *
+ *    pTEXT n, p;
+ *    struct ctree* ct;
+ *    
+ *    if(ctdbFindTable(*CTH(self), &n, &p) != CTDBRET_OK)
+ *        return Qnil;
+ *
+ *    // TODO: DRY up creating table objects via c
+ *
+ *    
+ *}
+ */
+
+/*
+ *static VALUE
+ *rb_ctdb_session_find_table!(VALUE self, value name)
+ *{
+ *    Check_Type(name, T_STRING);
+ *
+ *    pCTHANDLE cth = CTH(self);
+ *
+ *    if(ctdbFindTable(*cth, ) != CTDBRET_OK)
+ *        rb_raise(cCTError, "[%d] ctdbFindTable failed.", ctdbGetError(*cth));
+ *        
+ *    
+ *}
+ */
+
+/*
  * Perform a session-wide lock.
  *
  * @param [Fixnum] mode A c-treeDB lock mode.
@@ -563,19 +596,19 @@ rb_ctdb_table_get_fields(VALUE self)
  * @return [CT::Field]
  * @raise [CT::Error] ctdbGetFieldByName failed.
  */
-// static VALUE
-// rb_ctdb_table_get_field_by_name(VALUE self, VALUE name)
-// {
-//     Check_Type(name, T_STRING);
-// 
-//     pCTHANDLE cth = CTH(self);
-//     CTHANDLE field;
-// 
-//     if(!(field = ctdbGetFieldByName(*cth, RSTRING_PTR(name))))
-//         rb_raise(cCTError, "[%d] ctdbGetFieldByName failed.", ctdbGetError(*cth));
-// 
-//     return rb_ctdb_field_new(cCTField, field);
-// }
+static VALUE
+rb_ctdb_table_get_field_by_name(VALUE self, VALUE name)
+{
+    Check_Type(name, T_STRING);
+ 
+    pCTHANDLE cth = CTH(self);
+    CTHANDLE field;
+ 
+    if(!(field = ctdbGetFieldByName(*cth, RSTRING_PTR(name))))
+        rb_raise(cCTError, "[%d] ctdbGetFieldByName failed.", ctdbGetError(*cth));
+ 
+    return rb_ctdb_field_new(cCTField, field);
+}
 
 /*
  * Retrieve the number of fields associated with the table. 
@@ -1382,6 +1415,68 @@ rb_ctdb_record_first_bang(VALUE self)
 
 /*
  *
+ *
+ */
+static VALUE
+rb_ctdb_record_get_field(VALUE self, VALUE field_name)
+{
+    Check_Type(field_name, T_STRING);
+    
+    struct ctree_record *ct = CTRecord(self);
+    CTHANDLE field;
+    NINT field_nbr;
+    CTDBTYPE field_type;
+    CTDBRET rc;
+    VALUE rb_value;
+
+    if((field = ctdbGetFieldByName(*ct->table_ptr, RSTRING_PTR(field_name))) == NULL)
+        rb_raise(cCTError, "[%d] ctdbGetFieldByName failed", ctdbGetError(&ct->handle));
+
+    field_nbr  = ctdbGetFieldNbr(field);
+    field_type = ctdbGetFieldType(field);
+    switch(field_type){
+        case CT_BOOL :
+            rb_value = rb_funcall(self, rb_intern("get_field_as_bool"), 1, field_name); 
+            break;
+        case CT_TINYINT :
+        case CT_SMALLINT :
+        case CT_INTEGER :
+        case CT_BIGINT :
+            rb_value = rb_funcall(self, rb_intern("get_field_as_signed"), 1, field_name);
+            break;
+        case CT_UTINYINT :
+        case CT_USMALLINT :
+        case CT_UINTEGER :
+            rb_value = rb_funcall(self, rb_intern("get_field_as_unsigned"), 1, field_name);
+            break;
+        case CT_CHARS :
+        case CT_FPSTRING :
+        case CT_F2STRING :
+        case CT_F4STRING :
+        case CT_PSTRING :
+        case CT_VARBINARY :
+        case CT_LVB :
+        case CT_VARCHAR :
+            rb_value = rb_funcall(self, rb_intern("get_field_as_string"), 1, field_name);
+            break; 
+        case CT_MONEY :
+        case CT_DATE :
+        case CT_TIME :
+        case CT_FLOAT :
+        case CT_DOUBLE :
+        case CT_TIMESTAMP :
+        case CT_EFLOAT :
+        //case CT_BINARY :
+        case CT_NUMBER :
+        case CT_CURRENCY :
+            rb_raise(rb_eNotImpError, "TODO: get_field field for `%s'", RSTRING_PTR(field_name));
+            break;
+    }
+    return rb_value;
+}
+
+/*
+ *
  * 
  * @param [Fixnum, String] id The field number or name.
  * @return [Boolean]
@@ -1772,6 +1867,66 @@ rb_ctdb_record_set_default_index(VALUE self, VALUE identifier)
     return self;
 }
 
+/*
+ *
+ *
+ *
+ */
+static VALUE
+rb_ctdb_record_set_field(VALUE self, VALUE field_name, VALUE value)
+{
+    Check_Type(field_name, T_STRING);
+
+    struct ctree_record *ct = CTRecord(self);
+    CTHANDLE field;
+    NINT field_nbr;
+    CTDBTYPE field_type;
+
+    if((field = ctdbGetFieldByName(*ct->table_ptr, RSTRING_PTR(field_name))) == NULL)
+        rb_raise(cCTError, "[%d] ctdbGetFieldByName failed", ctdbGetError(&ct->handle));
+
+    field_nbr  = ctdbGetFieldNbr(field);
+    field_type = ctdbGetFieldType(field);
+    switch(field_type){
+        case CT_BOOL :
+            rb_funcall(self, rb_intern("set_field_as_bool"), 2, field_name, value); 
+            break;
+        case CT_TINYINT :
+        case CT_SMALLINT :
+        case CT_INTEGER :
+        case CT_BIGINT :
+            rb_funcall(self, rb_intern("set_field_as_signed"), 2, field_name, value);
+            break;
+        case CT_UTINYINT :
+        case CT_USMALLINT :
+        case CT_UINTEGER :
+            rb_funcall(self, rb_intern("set_field_as_unsigned"), 2, field_name, value);
+            break;
+        case CT_CHARS :
+        case CT_FPSTRING :
+        case CT_F2STRING :
+        case CT_F4STRING :
+        case CT_PSTRING :
+        case CT_VARBINARY :
+        case CT_LVB :
+        case CT_VARCHAR :
+            rb_funcall(self, rb_intern("set_field_as_string"), 2, field_name, value);
+            break; 
+        case CT_MONEY :
+        case CT_DATE :
+        case CT_TIME :
+        case CT_FLOAT :
+        case CT_DOUBLE :
+        case CT_TIMESTAMP :
+        case CT_EFLOAT :
+        // NOTE: I kept getting duplicate entry for this case CT_BINARY :
+        case CT_NUMBER :
+        case CT_CURRENCY :
+            rb_raise(rb_eNotImpError, "TODO: set_field for `%s'", RSTRING_PTR(field_name));
+            break;
+    }
+    return self;
+}
 // static VALUE
 // rb_ctdb_record_set_field_as_binary(VALUE self, VALUE num, VALUE value){}
 
@@ -2277,7 +2432,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTTable, "field_names", rb_ctdb_table_get_field_names, 0);
     rb_define_method(cCTTable, "get_field", rb_ctdb_table_get_field, 1);
     rb_define_method(cCTTable, "get_fields", rb_ctdb_table_get_fields, 0);
-    // rb_define_method(cCTTable, "get_field_by_name", rb_ctdb_table_get_field_by_name, 1);
+    rb_define_method(cCTTable, "get_field_by_name", rb_ctdb_table_get_field_by_name, 1);
     // rb_define_method(cCTTable, "indecies", rb_ctdb_table_get_indecies, 0);
     // rb_define_method(cCTTable, "index", rb_ctdb_table_get_index, 1);
     rb_define_method(cCTTable, "name", rb_ctdb_table_get_name, 0);
@@ -2350,6 +2505,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "find", rb_ctdb_record_find, 1);
     rb_define_method(cCTRecord, "first", rb_ctdb_record_first, 0);
     rb_define_method(cCTRecord, "first!", rb_ctdb_record_first_bang, 0);
+    rb_define_method(cCTRecord, "get_field", rb_ctdb_record_get_field, 1);
     rb_define_method(cCTRecord, "get_field_as_bool", rb_ctdb_record_get_field_as_bool, 1);
     rb_define_method(cCTRecord, "get_field_as_date", rb_ctdb_record_get_field_as_date, 1);
     rb_define_method(cCTRecord, "get_field_as_float", rb_ctdb_record_get_field_as_float, 1);
@@ -2363,6 +2519,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "lock!", rb_ctdb_record_lock_bang, 1);
     rb_define_method(cCTRecord, "next", rb_ctdb_record_next, 0);
     rb_define_method(cCTRecord, "prev", rb_ctdb_record_prev, 0);
+    rb_define_method(cCTRecord, "set_field", rb_ctdb_record_set_field, 2);
     rb_define_method(cCTRecord, "set_field_as_bool", rb_ctdb_record_set_field_as_bool, 2);
     rb_define_method(cCTRecord, "set_field_as_date", rb_ctdb_record_set_field_as_date, 2);
     rb_define_method(cCTRecord, "set_field_as_float", rb_ctdb_record_set_field_as_float, 2);

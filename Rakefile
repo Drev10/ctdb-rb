@@ -1,6 +1,9 @@
-require File.dirname(__FILE__) + '/lib/ctdb'
 require 'rake/extensiontask'
+require 'rake/testtask'
 require 'yard'
+
+$:.unshift(File.dirname(__FILE__) + '/lib')
+require 'ctdb'
 
 Rake::ExtensionTask.new('ctdb_sdk')
 
@@ -34,4 +37,14 @@ end
 
 YARD::Rake::YardocTask.new do |t|
   t.files = ['lib/ctdb.rb', 'ext/**/*.c']
+end
+
+Rake::TestTask.new do |t|
+  t.verbose = true
+  t.test_files = [ 
+      'test/test_ct_session.rb',
+      'test/test_ct_table.rb',
+      'test/test_ct_field',
+      'test/test_ct_record' 
+  ]
 end

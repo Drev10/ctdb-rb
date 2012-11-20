@@ -121,8 +121,8 @@ class TestCTRecord < Test::Unit::TestCase
 
     assert_nothing_raised { @rec.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
     assert_nothing_raised { @rec.find(CT::FIND_EQ) }
-    assert_equal(x['t_uinteger'], @rec.get_field_as_unsigned('t_uinteger'))
-    assert_equal(x['t_varchar'],  @rec.get_field_as_string('t_varchar'))
+    assert_equal(x['t_uinteger'], @rec.get_field('t_uinteger'))
+    assert_equal(x['t_varchar'],  @rec.get_field('t_varchar'))
     
   end
 

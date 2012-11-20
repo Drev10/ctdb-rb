@@ -39,6 +39,7 @@ end
 $LIBPATH  << "#{lib_dir}"
 $CFLAGS   << " -fPIC"
 
+
 errors = []
 errors << "'ctdbsdk.h'" unless have_header('ctdbsdk.h')
 errors << "'#{lib}'"  unless have_library(lib)
