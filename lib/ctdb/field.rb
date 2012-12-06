@@ -16,7 +16,7 @@ module CT
       self.type == CT::TINYINT || self.type == CT::UTINYINT || 
           self.type == CT::SMALLINT || self.type == CT::USMALLINT ||
           self.type == CT::INTEGER || self.type == CT::UINTEGER ||
-          self.type == NUMBER
+          self.type == CT::BIGINT || self.type == NUMBER
     end
 
     def date?
