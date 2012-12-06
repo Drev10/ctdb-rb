@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
 
   s.authors = [ "Daniel Johnston" ]
 
-  s.files       = Dir['lib/*.rb'] + 
+  s.files       = Dir['lib/**/*.rb'] + 
                   Dir['ext/ctdb_sdk/*.{c,rb}']
 
   s.extensions  = [ 'ext/ctdb_sdk/extconf.rb' ]
