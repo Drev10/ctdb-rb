@@ -6,3 +6,4 @@ end
 
 require 'ctdb/version'
 require 'ctdb/field'
+require 'ctdb/record'
