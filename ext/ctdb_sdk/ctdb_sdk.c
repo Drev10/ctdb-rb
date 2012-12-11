@@ -1532,19 +1532,26 @@ rb_ctdb_record_get_field_as_bool(VALUE self, VALUE id)
 static VALUE
 rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
 {
-    NINT i; // Field number
-    CTDBRET rc;
-    CTDATE value;
-    NINT y, m, d;
-    CTUNSIGNED uvalue; 
-    pCTHANDLE cth = CTH(self);
-    VALUE rbdt;
+    struct ctree_record* ct;
+    NINT i;             // Field number
+    CTDBRET rc;         // Generic ctdb return code var
+    CTDATE value;       // Hopefully the Date retrieved from the field
+    //NINT y, m, d;
+    CTUNSIGNED uvalue;  // Container for the field value as unsigned
+    CTDATE_TYPE dtype;  // Used to determine the Date format
+    CTHANDLE field;     // Field handle
+    VRLEN size = 0;     // Size of Date as a String
+    TEXT cdt;           // c Date value as a String
+    VALUE rbdt;         // The Date as a Ruby object.
+    char * format;      // The Date format for strptime
+    
+    ct = CTRecord(self);
 
     switch(rb_type(id)){
         case T_STRING :
-            if((i = ctdbGetFieldNumberByName(*cth, RSTRING_PTR(id))) == -1)
+            if((i = ctdbGetFieldNumberByName(ct->handle, RSTRING_PTR(id))) == -1)
                 rb_raise(cCTError, "[%d] ctdbGetFieldNumberByName failed.", 
-                    ctdbGetError(*cth));
+                    ctdbGetError(ct->handle));
             break;
         case T_FIXNUM :
             i = FIX2INT(id);
@@ -1554,21 +1561,71 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
                 rb_obj_classname(id));
             break;
     }
-
-    if(ctdbGetFieldAsUnsigned(*cth, i, &uvalue) == CTDBRET_OK){
-      
-      if(ctdbGetFieldAsDate(*cth, i, &value) != CTDBRET_OK)
-          rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", ctdbGetError(*cth));
-
-      rc = ctdbDateUnpack(value, &y, &m, &d);
-      if(rc != CTDBRET_OK)
-          rb_raise(cCTError, "[%d] ctdbDateUnpack failed.", rc);
-
-      rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
-          INT2FIX(y), INT2FIX(m), INT2FIX(d));
     
+    if(ctdbGetFieldAsUnsigned(ct->handle, i, &uvalue) == CTDBRET_OK){
+      
+        if(ctdbGetFieldAsDate(ct->handle, i, &value) != CTDBRET_OK)
+            rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", 
+                ctdbGetError(ct->handle));
+
+        /*
+         *if((rc = ctdbDateUnpack(value, &y, &m, &d)) != CTDBRET_OK)
+         *    rb_raise(cCTError, "[%d] ctdbDateUnpack failed rc `%d'.", 
+         *        ctdbGetError(*cth), rc); 
+         *
+         *
+         *rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
+         *        INT2FIX(y), INT2FIX(m), INT2FIX(d));
+         */
+        
+        field = ctdbGetField(ct->table_ptr, i);
+        dtype = ctdbGetFieldDefaultDateType(field);
+
+        /*
+         *switch(dtype) {
+         *    case CTDATE_MDCY :
+         *    case CTDATE_DMCY :
+         *    case CTDATE_CYMD :
+         *        size = 10;
+         *        break;
+         *    case CTDATE_MDY :
+         *    case CTDATE_DMY :
+         *    case CTDATE_YMD :
+         *        size = 8;
+         *        break;
+         *}
+         */
+
+        switch(dtype) {
+            case CTDATE_MDCY :
+                format = (char *)"%m/%d/%Y";
+                break;
+            case CTDATE_DMCY : 
+                format = (char *)"%m/%d/%y";
+                break;
+            case CTDATE_CYMD :
+                format = (char *)"%d/%m/%Y";
+                break;
+            case CTDATE_MDY :
+                format = (char *)"%d/%m/%y";
+                break;
+            case CTDATE_DMY :
+                format = (char *)"%Y%m%d";
+                break;
+            case CTDATE_YMD :
+                format = (char *)"%y%m%d";
+                break;
+        }
+
+        size = (strlen(format) + 3);
+        if((rc = ctdbDateToString(value, dtype, &cdt, size)) != CTDBRET_OK)
+            rb_raise(cCTError, "[%d] ctdbDateToString failed.", rc);
+        
+        rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("strptime"), 2, 
+                rb_str_new_cstr(&cdt), rb_str_new_cstr(format));
+        
     } else {
-      rbdt = INT2FIX(0);
+        rbdt = INT2FIX(0);
     }
     
     return rbdt;
