@@ -69,9 +69,9 @@ rb_ctdb_get_defualt_date_type(VALUE self)
 static VALUE
 rb_ctdb_set_defualt_date_type(VALUE self, VALUE type)
 {
-    Check_Type(type, T_FIXNUM);
-
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(type, T_FIXNUM);
 
     if(ctdbSetDefDateType(*cth, FIX2INT(type)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetDefDateType failed", ctdbGetError(*cth));
@@ -92,10 +92,10 @@ free_rb_ctdb_session(struct ctree* ct)
 VALUE
 rb_ctdb_session_new(VALUE klass, VALUE mode)
 {
-    Check_Type(mode, T_FIXNUM);
-
     struct ctree* ct;
     VALUE obj = Data_Make_Struct(klass, struct ctree, 0, free_rb_ctdb_session, ct);
+    
+    Check_Type(mode, T_FIXNUM);
 
     // Allocate a new session for logon only. No session or database dictionary
     // files will be used. No database functions can be used with this session mode.
@@ -180,9 +180,9 @@ rb_ctdb_session_lock(VALUE self, VALUE mode)
 static VALUE
 rb_ctdb_session_lock_bang(VALUE self, VALUE mode)
 {
-    Check_Type(mode, T_FIXNUM);
-
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(mode, T_FIXNUM);
 
     if(ctdbLock(*cth, FIX2INT(mode)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbLock failed.", ctdbGetError(*cth));
@@ -211,14 +211,16 @@ static VALUE
 rb_ctdb_session_logon(VALUE self, VALUE engine, VALUE user, VALUE password)
 // rb_ctdb_session_logon(int argc, VALUE *argv, VALUE self)
 {
+    pCTHANDLE cth = CTH(self);
+    pTEXT e, u, p;
+    
     Check_Type(engine, T_STRING);
     Check_Type(user, T_STRING);
     Check_Type(user, T_STRING);
 
-    pCTHANDLE cth = CTH(self);
-    pTEXT e = RSTRING_PTR(engine);
-    pTEXT u = RSTRING_PTR(user);
-    pTEXT p = RSTRING_PTR(password);
+    e = RSTRING_PTR(engine);
+    u = RSTRING_PTR(user);
+    p = RSTRING_PTR(password);
 
     if(ctdbLogon(*cth, e, u, p) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbLogon failed.", ctdbGetError(*cth));
@@ -276,6 +278,7 @@ static VALUE
 rb_ctdb_session_set_path_prefix(VALUE self, VALUE prefix)
 {
     pTEXT pp;
+    pCTHANDLE cth = CTH(self);
 
     switch(rb_type(prefix)){
         case T_STRING :
@@ -290,7 +293,6 @@ rb_ctdb_session_set_path_prefix(VALUE self, VALUE prefix)
             break;
     }
 
-    pCTHANDLE cth = CTH(self);
     if(ctdbSetPathPrefix(*cth, pp) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetPathPrefix failed.", ctdbGetError(*cth));
 
@@ -357,11 +359,14 @@ free_rb_ctdb_table(struct ctree* ct)
 VALUE
 rb_ctdb_table_new(VALUE klass, VALUE session)
 {
+    struct ctree* ct;
+    pCTHANDLE cth;
+    VALUE obj;
+    
     Check_Type(session, T_DATA);
 
-    struct ctree* ct;
-    pCTHANDLE cth = CTH(session);
-    VALUE obj = Data_Make_Struct(klass, struct ctree, 0, free_rb_ctdb_table, ct);
+    cth = CTH(session);
+    obj = Data_Make_Struct(klass, struct ctree, 0, free_rb_ctdb_table, ct);
 
     if((ct->handle = ctdbAllocTable(*cth)) == NULL)
         rb_raise(cCTError, "[%d] ctdbAllocTable failed", ctdbGetError(*cth));
@@ -395,12 +400,12 @@ rb_ctdb_table_init(VALUE self, VALUE session)
 static VALUE
 rb_ctdb_table_add_field(VALUE self, VALUE name, VALUE type, VALUE length)
 {
+    CTHANDLE field;
+    pCTHANDLE cth = CTH(self);
+    
     Check_Type(name, T_STRING);
     Check_Type(type, T_FIXNUM);
     Check_Type(length, T_FIXNUM);
-
-    pCTHANDLE cth = CTH(self);
-    CTHANDLE field;
 
     field = ctdbAddField(*cth, RSTRING_PTR(name), FIX2INT(type), FIX2INT(length));
     if(!field) rb_raise(cCTError, "[%d] ctdbAddField failed.", ctdbGetError(*cth));
@@ -421,7 +426,6 @@ rb_ctdb_table_add_field(VALUE self, VALUE name, VALUE type, VALUE length)
 static VALUE
 rb_ctdb_table_add_index(VALUE self, VALUE name, VALUE type)/*, VALUE opts)*/
 {
-    Check_Type(name, T_STRING);
     // Check_Type(type, T_DATA);
     // Check_Type(opts, T_HASH);
 
@@ -439,11 +443,14 @@ rb_ctdb_table_add_index(VALUE self, VALUE name, VALUE type)/*, VALUE opts)*/
     // CTBOOL nflag  = (rb_type(allow_nil) == T_TRUE ? YES : NO);
     CTBOOL dflag = NO;
     CTBOOL nflag = YES;
+    VALUE ct_index;
+
+    Check_Type(name, T_STRING);
 
     index = ctdbAddIndex(*cth, RSTRING_PTR(name), FIX2INT(type), dflag, nflag);
     if(!index) rb_raise(cCTError, "[%d] ctdbAddIndex failed.", ctdbGetError(*cth));
 
-    VALUE ct_index = rb_ctdb_index_new(cCTIndex, index);
+    ct_index = rb_ctdb_index_new(cCTIndex, index);
 
     return ct_index;
 }
@@ -457,9 +464,9 @@ rb_ctdb_table_add_index(VALUE self, VALUE name, VALUE type)/*, VALUE opts)*/
 static VALUE
 rb_ctdb_table_alter(VALUE self, VALUE mode)
 {
-    Check_Type(mode, T_FIXNUM);
-
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(mode, T_FIXNUM);
 
     if(ctdbAlterTable(*cth, FIX2INT(mode)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbAlterTable failed.", ctdbGetError(*cth));
@@ -493,10 +500,10 @@ rb_ctdb_table_close(VALUE self)
 static VALUE
 rb_ctdb_table_create(VALUE self, VALUE name, VALUE mode)
 {
+    pCTHANDLE cth = CTH(self);
+    
     Check_Type(name, T_STRING);
     Check_Type(mode, T_FIXNUM);
-
-    pCTHANDLE cth = CTH(self);
 
     // if(ctdbCreateTable(*cth, RSTRING_PTR(name), FIX2INT(mode)) != CTDBRET_OK)
     if(ctdbCreateTable(*cth, RSTRING_PTR(name), CTCREATE_NORMAL) != CTDBRET_OK)
@@ -568,7 +575,7 @@ rb_ctdb_table_get_fields(VALUE self)
     pCTHANDLE cth = CTH(self);
     CTHANDLE field;
     pTEXT fname;
-    VALUE fields;
+    VALUE fields, ct_field;
 
     if((n = ctdbGetTableFieldCount(*cth)) == -1)
         rb_raise(cCTError, "[%d] ctdbGetTableFieldCount failed.", 
@@ -581,9 +588,9 @@ rb_ctdb_table_get_fields(VALUE self)
         if((field = ctdbGetField(*cth, i)) == NULL)
             rb_raise(cCTError, "[%d] ctdbGetField failed.", ctdbGetError(*cth));
 
-        VALUE ct_field = rb_ctdb_field_new(cCTField, field);
+        ct_field = rb_ctdb_field_new(cCTField, field);
         if(rb_block_given_p()) rb_yield(ct_field);
-        rb_ary_store(fields, i, ct_field);
+            rb_ary_store(fields, i, ct_field);
     }
 
     return fields;
@@ -599,10 +606,10 @@ rb_ctdb_table_get_fields(VALUE self)
 static VALUE
 rb_ctdb_table_get_field_by_name(VALUE self, VALUE name)
 {
-    Check_Type(name, T_STRING);
- 
     pCTHANDLE cth = CTH(self);
     CTHANDLE field;
+    
+    Check_Type(name, T_STRING);
  
     if(!(field = ctdbGetFieldByName(*cth, RSTRING_PTR(name))))
         rb_raise(cCTError, "[%d] ctdbGetFieldByName failed.", ctdbGetError(*cth));
@@ -687,9 +694,9 @@ rb_ctdb_table_get_name(VALUE self)
 static VALUE
 rb_ctdb_table_open(VALUE self, VALUE name, VALUE mode)
 {
-    Check_Type(name, T_STRING);
-
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(name, T_STRING);
 
     // if(ctdbOpenTable(*cth, RSTRING_PTR(name), FIX2INT(mode)) !=  CTDBRET_OK)
     if(ctdbOpenTable(*cth, RSTRING_PTR(name), CTOPEN_NORMAL) !=  CTDBRET_OK)
@@ -763,9 +770,9 @@ rb_ctdb_table_get_path(VALUE self)
 static VALUE
 rb_ctdb_table_set_path(VALUE self, VALUE path)
 {
-    Check_Type(path, T_STRING);
-
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(path, T_STRING);
 
     if(ctdbSetTablePath(*cth, RSTRING_PTR(path)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetTablePath failed.", ctdbGetError(*cth));
@@ -880,9 +887,9 @@ rb_ctdb_field_get_length(VALUE self)
 static VALUE
 rb_ctdb_field_set_length(VALUE self, VALUE length)
 {
-    Check_Type(length, T_FIXNUM);
-
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(length, T_FIXNUM);
 
     if(ctdbSetFieldLength(*cth, FIX2INT(length)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldLength failed.", ctdbGetError(*cth));
@@ -899,8 +906,8 @@ rb_ctdb_field_set_length(VALUE self, VALUE length)
 static VALUE
 rb_ctdb_field_get_name(VALUE self)
 {
-    pCTHANDLE cth = CTH(self);
     pTEXT name;
+    pCTHANDLE cth = CTH(self);
 
     if((name = ctdbGetFieldName(*cth)) == NULL)
         rb_raise(cCTError, "[%d] ctdbGetFieldName failed.", ctdbGetError(*cth));
@@ -917,9 +924,9 @@ rb_ctdb_field_get_name(VALUE self)
 static VALUE
 rb_ctdb_field_set_name(VALUE self, VALUE name)
 {
-    Check_Type(name, T_STRING);
-
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(name, T_STRING);
 
     if(ctdbSetFieldName(*cth, RSTRING_PTR(name)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldName failed.", ctdbGetError(*cth));
@@ -964,10 +971,10 @@ rb_ctdb_field_get_precision(VALUE self)
  */
 static VALUE
 rb_ctdb_field_set_precision(VALUE self, VALUE precision)
-{
-    Check_Type(precision, T_FIXNUM);
-
+{ 
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(precision, T_FIXNUM);
 
     if(ctdbSetFieldPrecision(*cth, FIX2INT(precision)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldPrecision failed.", ctdbGetError(*cth));
@@ -1022,9 +1029,9 @@ rb_ctdb_field_set_scale(VALUE self, VALUE scale)
 
 static VALUE
 rb_ctdb_field_get_type(VALUE self)
-{
-    pCTHANDLE cth = CTH(self);
+{ 
     CTDBTYPE type;
+    pCTHANDLE cth = CTH(self);
 
     if((type = ctdbGetFieldType(*cth)) == 0)
         rb_raise(cCTError, "[%d] ctdbGetFieldType failed.", ctdbGetError(*cth));
@@ -1062,8 +1069,9 @@ rb_ctdb_index_new(VALUE klass, CTHANDLE index)
 static VALUE
 rb_ctdb_index_add_segment(VALUE self, VALUE field, VALUE mode)
 {
-    Check_Type(field, T_DATA);
     pCTHANDLE cth = CTH(self);
+    
+    Check_Type(field, T_DATA);
 
     if(!ctdbAddSegment(*cth, *CTH(field), CTSEG_SCHSEG))
         rb_raise(cCTError, "[%d] ctdbAddSegment failed.", ctdbGetError(*cth));
@@ -1089,12 +1097,15 @@ rb_ctdb_index_get_allow_dups(VALUE self)
 static VALUE
 rb_ctdb_index_set_allow_dups(VALUE self, VALUE value)
 {
+    pCTHANDLE cth;
+    CTBOOL v;
+  
     if(rb_type(value) != T_TRUE && rb_type(value) != T_FALSE)
         rb_raise(rb_eArgError, "Unexpected value type `%s' for CT_BOOL", 
                  rb_obj_classname(value));
 
-    pCTHANDLE cth = CTH(self);
-    CTBOOL v = (value == T_TRUE ? YES : NO);
+    cth = CTH(self);
+    v = (value == T_TRUE ? YES : NO);
 
     if(ctdbSetIndexDuplicateFlag(*cth, v) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetIndexDuplicateFlag failed.", 
@@ -1164,8 +1175,8 @@ rb_ctdb_segment_new(VALUE klass, CTHANDLE segment)
 static VALUE
 rb_ctdb_segment_get_field(VALUE self)
 {
-    pCTHANDLE cth = CTH(self);
     CTHANDLE f;
+    pCTHANDLE cth = CTH(self);
 
     if((f = ctdbGetSegmentField(*cth)) == NULL)
         rb_raise(cCTError, "[%d] ctdbGetSegmentField failed.", ctdbGetError(*cth));
@@ -1183,8 +1194,8 @@ rb_ctdb_segment_set_field(VALUE self, VALUE field)
 static VALUE
 rb_ctdb_segment_get_field_name(VALUE self)
 {
-    pCTHANDLE cth = CTH(self);
     pTEXT name;
+    pCTHANDLE cth = CTH(self);
 
     if((name = ctdbGetSegmentFieldName(*cth)) == NULL)
         rb_raise(cCTError, "[%d] ctdbGetSegmentFieldName failed.", 
@@ -1249,10 +1260,10 @@ ctdb_record_is_field_null(pCTHANDLE record_ptr, NINT field_num)
 VALUE
 rb_ctdb_record_new(VALUE klass, VALUE table)
 {
-    Check_Type(table, T_DATA);
-
     struct ctree_record* ctrec;
     VALUE self;
+    
+    Check_Type(table, T_DATA);
 
     self = Data_Make_Struct(klass, struct ctree_record, 0, free_rb_ctdb_record, ctrec);
     ctrec->table_ptr = CTH(table);
@@ -1317,13 +1328,13 @@ static VALUE
 rb_ctdb_record_get_default_index(VALUE self)
 {
     NINT i; // Index number
+    CTHANDLE ndx;
     struct ctree_record *ct = CTRecord(self);
 
     if((i = ctdbGetDefaultIndex(ct->handle)) == -1)
         rb_raise(cCTError, "[%d] ctdbGetDefaultIndex failed.", 
                 ctdbGetError(ct->handle));
 
-    CTHANDLE ndx;
     if((ndx = ctdbGetIndex(*ct->table_ptr, i)) == NULL)
         rb_raise(cCTError, "[%d] ctdbGetIndex failed.", ctdbGetError(ct->handle));
 
@@ -1351,9 +1362,9 @@ rb_ctdb_record_get_filter(VALUE self)
 static VALUE
 rb_ctdb_record_set_filter(VALUE self, VALUE filter)
 {
-    Check_Type(filter, T_STRING);
-
     pCTHANDLE cth = CTRecordH(self);
+    
+    Check_Type(filter, T_STRING);
 
     if(ctdbFilterRecord(*cth, RSTRING_PTR(filter)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbFilterRecord failed.", ctdbGetError(*cth));
@@ -1420,14 +1431,14 @@ rb_ctdb_record_first_bang(VALUE self)
 static VALUE
 rb_ctdb_record_get_field(VALUE self, VALUE field_name)
 {
-    Check_Type(field_name, T_STRING);
-    
-    struct ctree_record *ct = CTRecord(self);
     CTHANDLE field;
     NINT field_nbr;
     CTDBTYPE field_type;
     CTDBRET rc;
-    VALUE rb_value;
+    VALUE rb_value = Qnil;
+    struct ctree_record *ct = CTRecord(self);
+
+    Check_Type(field_name, T_STRING);
 
     if((field = ctdbGetFieldByName(*ct->table_ptr, RSTRING_PTR(field_name))) == NULL)
         rb_raise(cCTError, "[%d] ctdbGetFieldByName failed", ctdbGetError(&ct->handle));
@@ -1489,6 +1500,7 @@ rb_ctdb_record_get_field_as_bool(VALUE self, VALUE id)
 {
     pCTHANDLE cth = CTH(self);
     NINT i; // Field number
+    CTBOOL value;
 
     switch(rb_type(id)){
         case T_STRING :
@@ -1505,7 +1517,6 @@ rb_ctdb_record_get_field_as_bool(VALUE self, VALUE id)
             break;
     }
 
-    CTBOOL value;
     if(ctdbGetFieldAsBool(*cth, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsBool failed.", ctdbGetError(*cth));
 
@@ -1521,8 +1532,13 @@ rb_ctdb_record_get_field_as_bool(VALUE self, VALUE id)
 static VALUE
 rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
 {
-    pCTHANDLE cth = CTH(self);
     NINT i; // Field number
+    CTDBRET rc;
+    CTDATE value;
+    NINT y, m, d;
+    CTUNSIGNED uvalue; 
+    pCTHANDLE cth = CTH(self);
+    VALUE rbdt;
 
     switch(rb_type(id)){
         case T_STRING :
@@ -1539,18 +1555,22 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
             break;
     }
 
-    CTDATE value;
-    if(ctdbGetFieldAsDate(*cth, i, &value) != CTDBRET_OK)
-        rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", ctdbGetError(*cth));
+    if(ctdbGetFieldAsUnsigned(*cth, i, &uvalue)){
+      
+      if(ctdbGetFieldAsDate(*cth, i, &value) != CTDBRET_OK)
+          rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", ctdbGetError(*cth));
 
-    NINT y, m, d;
-    CTDBRET rc = ctdbDateUnpack(value, &y, &m, &d);
-    if(rc != CTDBRET_OK)
-        rb_raise(cCTError, "[%d] ctdbDateUnpack failed.", rc);
+      rc = ctdbDateUnpack(value, &y, &m, &d);
+      if(rc != CTDBRET_OK)
+          rb_raise(cCTError, "[%d] ctdbDateUnpack failed.", rc);
 
-    VALUE rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
-            INT2FIX(y), INT2FIX(m), INT2FIX(d));
-
+      rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
+          INT2FIX(y), INT2FIX(m), INT2FIX(d));
+    
+    } else {
+      rbdt = Qnil;
+    }
+    
     return rbdt;
 }
 
@@ -1564,8 +1584,9 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
 static VALUE
 rb_ctdb_record_get_field_as_float(VALUE self, VALUE id)
 {
-    pCTHANDLE cth = CTH(self);
     NINT i; // Field number
+    CTFLOAT value;
+    pCTHANDLE cth = CTH(self);
 
     switch(rb_type(id)){
         case T_STRING :
@@ -1582,7 +1603,7 @@ rb_ctdb_record_get_field_as_float(VALUE self, VALUE id)
             break;
     }
 
-    CTFLOAT value;
+
     if(ctdbGetFieldAsFloat(*cth, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsFloat failed.", ctdbGetError(*cth));
 
@@ -1601,6 +1622,7 @@ rb_ctdb_record_get_field_as_signed(VALUE self, VALUE id)
 {
     pCTHANDLE cth = CTH(self);
     NINT i; // Field number
+    CTSIGNED value;
 
     switch(rb_type(id)){
         case T_STRING :
@@ -1619,7 +1641,6 @@ rb_ctdb_record_get_field_as_signed(VALUE self, VALUE id)
 
     if(ctdb_record_is_field_null(cth, i) == YES) return Qnil;
 
-    CTSIGNED value;
     if(ctdbGetFieldAsSigned(*cth, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsSigned failed.", ctdbGetError(*cth));
 
@@ -1638,6 +1659,7 @@ rb_ctdb_record_get_field_as_string(VALUE self, VALUE id)
 {
     struct ctree_record *ct = CTRecord(self);
     NINT i; // Field number
+    VRLEN len;
 
     switch(rb_type(id)){
         case T_STRING :
@@ -1656,7 +1678,7 @@ rb_ctdb_record_get_field_as_string(VALUE self, VALUE id)
 
     // Retrieve the actual field size. The actual size of variable-length fields, 
     // such as CT_VARCHAR and CT_VARBINARY, may vary from the defined size.
-    VRLEN len = ctdbGetFieldDataLength(ct->handle, i);
+    len = ctdbGetFieldDataLength(ct->handle, i);
 
     TEXT value[len+1]; // Field value
     if(ctdbGetFieldAsString(ct->handle, i, value, 
@@ -1676,6 +1698,9 @@ rb_ctdb_record_get_field_as_time(VALUE self, VALUE id)
 {
     struct ctree_record *ct = CTRecord(self);
     NINT i; // Field number
+    CTTIME value;
+    NINT h, m, s;
+    CTDBRET rc;
 
     switch(rb_type(id)){
         case T_STRING :
@@ -1692,13 +1717,11 @@ rb_ctdb_record_get_field_as_time(VALUE self, VALUE id)
             break;
     }
 
-    CTTIME value;
     if(ctdbGetFieldAsTime(ct->handle, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsTime failed.", 
                 ctdbGetError(ct->handle));
 
-    NINT h, m, s;
-    CTDBRET rc = ctdbTimeUnpack(value, &h, &m, &s);
+    rc = ctdbTimeUnpack(value, &h, &m, &s);
     if(rc != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbTimeUnpack failed.", rc);
 
@@ -1721,6 +1744,7 @@ static VALUE
 rb_ctdb_record_get_field_as_unsigned(VALUE self, VALUE id)
 {
     NINT i;
+    CTUNSIGNED value;
     pCTHANDLE cth = CTH(self);
 
     switch(rb_type(id)){
@@ -1740,7 +1764,6 @@ rb_ctdb_record_get_field_as_unsigned(VALUE self, VALUE id)
 
     if(ctdb_record_is_field_null(cth, i) == YES) return Qnil;
 
-    CTUNSIGNED value;
     if(ctdbGetFieldAsUnsigned(*cth, i, &value) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbGetFieldAsUnsigned failed.", 
                 ctdbGetError(*cth));
@@ -1877,12 +1900,12 @@ rb_ctdb_record_set_default_index(VALUE self, VALUE identifier)
 static VALUE
 rb_ctdb_record_set_field(VALUE self, VALUE field_name, VALUE value)
 {
-    Check_Type(field_name, T_STRING);
-
     struct ctree_record *ct = CTRecord(self);
     CTHANDLE field;
     NINT field_nbr;
     CTDBTYPE field_type;
+    
+    Check_Type(field_name, T_STRING);
 
     if((field = ctdbGetFieldByName(*ct->table_ptr, RSTRING_PTR(field_name))) == NULL)
         rb_raise(cCTError, "[%d] ctdbGetFieldByName failed", ctdbGetError(&ct->handle));
@@ -1947,13 +1970,14 @@ rb_ctdb_record_set_field(VALUE self, VALUE field_name, VALUE value)
 static VALUE
 rb_ctdb_record_set_field_as_bool(VALUE self, VALUE id, VALUE value)
 {
+    NINT i;
+    pCTHANDLE cth = CTRecordH(self);
+    CTBOOL cval;
+
     if(rb_type(value) != T_TRUE && rb_type(value) != T_FALSE)
         rb_raise(rb_eArgError, "Unexpected value type `%s' for CT_BOOL", 
                  rb_obj_classname(value));
-
-    NINT i;
-    pCTHANDLE cth = CTRecordH(self);
-
+    
     switch(rb_type(id)){
         case T_STRING :
             if((i = ctdbGetFieldNumberByName(*cth, RSTRING_PTR(id))) == -1)
@@ -1969,7 +1993,7 @@ rb_ctdb_record_set_field_as_bool(VALUE self, VALUE id, VALUE value)
             break;
     }
 
-    CTBOOL cval = (rb_type(value) == T_TRUE ? YES : NO);
+    cval = (rb_type(value) == T_TRUE ? YES : NO);
 
     if(ctdbSetFieldAsBool(*cth, i, cval) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldAsBool falied.", ctdbGetError(*cth));
@@ -1991,6 +2015,8 @@ rb_ctdb_record_set_field_as_date(VALUE self, VALUE id, VALUE value)
 {
     NINT i;
     pCTHANDLE cth = CTRecordH(self);
+    CTDATE ctdate;
+    CTDBRET rc;
 
     switch(rb_type(id)){
         case T_STRING :
@@ -2007,17 +2033,23 @@ rb_ctdb_record_set_field_as_date(VALUE self, VALUE id, VALUE value)
             break;
     }
 
-    CTDATE ctdate;
-    CTDBRET rc = ctdbDatePack(&ctdate, 
+    if(value == Qnil){
+      if(ctdbSetFieldAsUnsigned(*cth, i, 0) != CTDBRET_OK)
+            rb_raise(cCTError, "[%d] ctdbSetFieldAsUnsigned failed.",
+                ctdbGetError(*cth));
+    } else {
+        rc = ctdbDatePack(&ctdate, 
             FIX2INT(rb_funcall(value, rb_intern("year"), 0)), 
             FIX2INT(rb_funcall(value, rb_intern("month"), 0)), 
             FIX2INT(rb_funcall(value, rb_intern("day"), 0)));
 
-    if(rc != CTDBRET_OK)
-        rb_raise(cCTError, "[%d] ctdbDatePack failed.", rc);
+        if(rc != CTDBRET_OK)
+            rb_raise(cCTError, "[%d] ctdbDatePack failed.", rc);
 
-    if(ctdbSetFieldAsDate(*cth, i, ctdate) != CTDBRET_OK)
-        rb_raise(cCTError, "[%d] ctdbSetFieldAsDate failed.", ctdbGetError(*cth));
+        if(ctdbSetFieldAsDate(*cth, i, ctdate) != CTDBRET_OK)
+            rb_raise(cCTError, "[%d] ctdbSetFieldAsDate failed.", 
+              ctdbGetError(*cth));
+    }
 
     return self;
 }
@@ -2028,11 +2060,11 @@ rb_ctdb_record_set_field_as_date(VALUE self, VALUE id, VALUE value)
 static VALUE
 rb_ctdb_record_set_field_as_float(VALUE self, VALUE id, VALUE value)
 {
-    Check_Type(value, T_FLOAT);
-
     NINT i;
     pCTHANDLE cth = CTRecordH(self);
 
+    Check_Type(value, T_FLOAT);
+    
     switch(rb_type(id)){
         case T_STRING :
             if((i = ctdbGetFieldNumberByName(*cth, RSTRING_PTR(id))) == -1)
@@ -2104,13 +2136,15 @@ rb_ctdb_record_set_field_as_signed(VALUE self, VALUE id, VALUE value)
 static VALUE
 rb_ctdb_record_set_field_as_string(VALUE self, VALUE id, VALUE value)
 {
-    Check_Type(value, T_STRING);
-
     NINT i;
     struct ctree_record *ct = CTRecord(self);
     TEXT fname;
     CTHANDLE f;
+    VRLEN len;
+    TEXT padc, delimc;
 
+    Check_Type(value, T_STRING);
+    
     switch(rb_type(id)){
         case T_STRING :
             if((i = ctdbGetFieldNumberByName(ct->handle, RSTRING_PTR(id))) == -1)
@@ -2134,8 +2168,7 @@ rb_ctdb_record_set_field_as_string(VALUE self, VALUE id, VALUE value)
 
     if(ctdbIsVariableField(ct->handle, i) == NO){
         // Pad string to the fixed length.
-        VRLEN len = ctdbGetFieldLength(f);
-        TEXT padc, delimc;
+        len = ctdbGetFieldLength(f);
 
         // TODO: Implement dynamic field padding with ctdbGetPadChar(*ct->table_ptr, &padc, &delimc);
 
@@ -2164,6 +2197,8 @@ rb_ctdb_record_set_field_as_time(VALUE self, VALUE id, VALUE value)
     struct ctree_record *ct = CTRecord(self);
     TEXT fname;
     CTHANDLE f;
+    CTDATE cttime;
+    CTDBRET rc;
 
     switch(rb_type(id)){
         case T_STRING :
@@ -2180,8 +2215,8 @@ rb_ctdb_record_set_field_as_time(VALUE self, VALUE id, VALUE value)
             break;
     }
 
-    CTDATE cttime;
-    CTDBRET rc = ctdbTimePack(&cttime,
+
+    rc = ctdbTimePack(&cttime,
             FIX2INT(rb_funcall(value, rb_intern("hour"), 0)), 
             FIX2INT(rb_funcall(value, rb_intern("min"), 0)), 
             FIX2INT(rb_funcall(value, rb_intern("sec"), 0)));
@@ -2247,10 +2282,10 @@ rb_ctdb_record_is_set(VALUE self)
 static VALUE
 rb_ctdb_record_set_on(VALUE self)
 {
-    struct ctree_record *ctrec = CTRecord(self);
     CTHANDLE ndx;
     NINT i;
     VRLEN len;
+    struct ctree_record *ctrec = CTRecord(self);
 
     if((i = ctdbGetDefaultIndex(ctrec->handle)) == -1)
         rb_raise(cCTError, "[%d] ctdbGetDefaultIndex failed.", 
