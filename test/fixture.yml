@@ -61,7 +61,7 @@
     t_integer: 0
     t_uinteger: 3
     t_money: "1,000.00"
-    t_date: 2012-05-31
+    t_date: 
     t_time: 
     t_float: 2.75
     t_double:
