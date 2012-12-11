@@ -1555,7 +1555,7 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
             break;
     }
 
-    if(ctdbGetFieldAsUnsigned(*cth, i, &uvalue)){
+    if(ctdbGetFieldAsUnsigned(*cth, i, &uvalue) == CTDBRET_OK){
       
       if(ctdbGetFieldAsDate(*cth, i, &value) != CTDBRET_OK)
           rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", ctdbGetError(*cth));
@@ -1568,7 +1568,7 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
           INT2FIX(y), INT2FIX(m), INT2FIX(d));
     
     } else {
-      rbdt = Qnil;
+      rbdt = INT2FIX(0);
     }
     
     return rbdt;
@@ -2045,7 +2045,7 @@ rb_ctdb_record_set_field_as_date(VALUE self, VALUE id, VALUE value)
 
         if(rc != CTDBRET_OK)
             rb_raise(cCTError, "[%d] ctdbDatePack failed.", rc);
-
+        
         if(ctdbSetFieldAsDate(*cth, i, ctdate) != CTDBRET_OK)
             rb_raise(cCTError, "[%d] ctdbSetFieldAsDate failed.", 
               ctdbGetError(*cth));
