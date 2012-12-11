@@ -1458,9 +1458,11 @@ rb_ctdb_record_get_field(VALUE self, VALUE field_name)
         case CT_LVB :
         case CT_VARCHAR :
             rb_value = rb_funcall(self, rb_intern("get_field_as_string"), 1, field_name);
-            break; 
-        case CT_MONEY :
+            break;
         case CT_DATE :
+            rb_value = rb_funcall(self, rb_intern("get_field_as_date"), 1, field_name);
+            break;
+        case CT_MONEY :
         case CT_TIME :
         case CT_FLOAT :
         case CT_DOUBLE :
@@ -1911,9 +1913,11 @@ rb_ctdb_record_set_field(VALUE self, VALUE field_name, VALUE value)
         case CT_LVB :
         case CT_VARCHAR :
             rb_funcall(self, rb_intern("set_field_as_string"), 2, field_name, value);
-            break; 
-        case CT_MONEY :
+            break;
         case CT_DATE :
+            rb_funcall(self, rb_intern("set_field_as_date"), 2, field_name, value);
+            break;
+        case CT_MONEY :
         case CT_TIME :
         case CT_FLOAT :
         case CT_DOUBLE :
