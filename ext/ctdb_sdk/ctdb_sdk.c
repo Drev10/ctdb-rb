@@ -2409,24 +2409,49 @@ rb_ctdb_record_is_set(VALUE self)
 static VALUE
 rb_ctdb_record_set_on(VALUE self)
 {
-    CTHANDLE ndx;
-    NINT i;
-    VRLEN len;
+    NINT i;             // Index number  
+    CTHANDLE index;     // Index handle
+    CTHANDLE segment;   // Segment handle
+    CTSEG_MODE mode;    // Segment mode
+    CTHANDLE field;     // Field handle
+    VRLEN count;        // Number of Segments that make up the Index 
+    VRLEN len = 0;      // Total length of data in indexed fields
+    int j;              // Random counter
     struct ctree_record *ctrec = CTRecord(self);
 
     if((i = ctdbGetDefaultIndex(ctrec->handle)) == -1)
         rb_raise(cCTError, "[%d] ctdbGetDefaultIndex failed.", 
                 ctdbGetError(ctrec->handle));
 
-    if((ndx = ctdbGetIndex(*ctrec->table_ptr, i)) == NULL)
+    printf("default index[%s]\n", ctdbGetDefaultIndexName(ctrec->handle));
+    if((index = ctdbGetIndex(*ctrec->table_ptr, i)) == NULL)
         rb_raise(cCTError, "[%d] ctdbGetIndex failed.",
                 ctdbGetError(ctrec->handle));
 
-    if((len = ctdbGetIndexKeyLength(ndx)) == -1)
-        rb_raise(cCTError, "[%d] ctdbGetIndexKeyLength failed.", 
-                ctdbGetError(ctrec->handle));
+    count = ctdbGetIndexSegmentCount(index);
+    printf("count[%d] name[%s]\n", count, ctdbGetIndexName(index));
+    for(j = 0; j < count; j++){
+        if((segment = ctdbGetSegment(index, j)) == NULL)
+            rb_raise(cCTError, "[%d] ctdbGetSegment failed.", 
+                    ctdbGetError(index));
+        
+        // TODO: DRY up old style absolute byte offset jazz.
+        mode = ctdbGetSegmentMode(segment);
+        if(mode == CTSEG_REGSEG || mode == CTSEG_UREGSEG)
+            field = ctdbGetSegmentPartialField(segment);
+        else
+            field = ctdbGetSegmentField(segment);
 
+        /*
+         *printf("==> [%d][%s]\n", j, ctdbGetSegmentFieldName(segment)); 
+         *if((field = ctdbGetSegmentField(segment)) == NULL)
+         *    rb_raise(cCTError, "[%d] ctdbGetSegmentField failed.",
+         *            ctdbGetError(segment));
+         */
 
+        if(ctdbGetFieldDataLength(ctrec->handle, ctdbGetFieldNbr(field)) > 0)
+            len += ctdbGetFieldLength(field);
+    }
 
 
     if(ctdbRecordSetOn(ctrec->handle, len) != CTDBRET_OK)

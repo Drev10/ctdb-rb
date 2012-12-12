@@ -196,6 +196,10 @@ class TestCTRecord < Test::Unit::TestCase
     assert_nil(@rec.prev) # => end of file
   end
 
+  def test_record_set
+
+  end
+
   # def test_unique_index_error
   #   # Make sure our unique index works
   #   assert_nothing_raised { @rec.clear }
