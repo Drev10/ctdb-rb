@@ -1078,6 +1078,15 @@ rb_ctdb_field_set_type(VALUE self, VALUE type)
     return self;
 }
 
+/*
+ * Does the field contain a nuberic value?
+ */
+static VALUE
+rb_ctdb_field_is_numeric(VALUE self)
+{
+    return ((ctdbIsFieldNumeric(*CTH(self)) == YES) ? Qtrue : Qfalse);
+}
+
 // =============
 // = CT::Index =
 // =============
@@ -1234,13 +1243,20 @@ rb_ctdb_segment_new(VALUE klass, CTHANDLE segment)
 static VALUE
 rb_ctdb_segment_get_field(VALUE self)
 {
-    CTHANDLE f;
+    CTSEG_MODE mode;
+    CTHANDLE field;
     pCTHANDLE cth = CTH(self);
 
-    if((f = ctdbGetSegmentField(*cth)) == NULL)
+    mode = ctdbGetSegmentMode(*cth);
+    if(mode == CTSEG_REGSEG || mode == CTSEG_UREGSEG)
+        field = ctdbGetSegmentPartialField(*cth);
+    else
+        field = ctdbGetSegmentField(*cth);
+
+    if(!field)
         rb_raise(cCTError, "[%d] ctdbGetSegmentField failed.", ctdbGetError(*cth));
 
-    return rb_ctdb_field_new(cCTField, f);
+    return rb_ctdb_field_new(cCTField, field);
 }
 
 static VALUE
@@ -1686,7 +1702,9 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
          */
 
         size = (strlen(format) + 3);
-        printf("-> size[%d] format[%s] type[%d] [%d]\n", size, format, dtype, value);
+        /*
+         *printf("-> size[%d] format[%s] type[%d] [%d]\n", size, format, dtype, value);
+         */
         if((rc = ctdbDateToString((CTDATE)value, dtype, &cdt, size)) != CTDBRET_OK)
             rb_raise(cCTError, "[%d] ctdbDateToString failed for `%s'.", rc, 
                     ctdbGetFieldName(field));
@@ -2407,54 +2425,52 @@ rb_ctdb_record_is_set(VALUE self)
  * record buffer.
  */
 static VALUE
-rb_ctdb_record_set_on(VALUE self)
+rb_ctdb_record_set_on(VALUE self, VALUE bytes)
 {
-    NINT i;             // Index number  
-    CTHANDLE index;     // Index handle
-    CTHANDLE segment;   // Segment handle
-    CTSEG_MODE mode;    // Segment mode
-    CTHANDLE field;     // Field handle
-    VRLEN count;        // Number of Segments that make up the Index 
-    VRLEN len = 0;      // Total length of data in indexed fields
-    int j;              // Random counter
+    /*
+     *NINT i;             // Index number  
+     *CTHANDLE index;     // Index handle
+     *CTHANDLE segment;   // Segment handle
+     *CTSEG_MODE mode;    // Segment mode
+     *CTHANDLE field;     // Field handle
+     *VRLEN count;        // Number of Segments that make up the Index 
+     *VRLEN len = 0;      // Total length of data in indexed fields
+     *int j;              // Random counter
+     */
     struct ctree_record *ctrec = CTRecord(self);
 
-    if((i = ctdbGetDefaultIndex(ctrec->handle)) == -1)
-        rb_raise(cCTError, "[%d] ctdbGetDefaultIndex failed.", 
-                ctdbGetError(ctrec->handle));
+/*
+ *    if((i = ctdbGetDefaultIndex(ctrec->handle)) == -1)
+ *        rb_raise(cCTError, "[%d] ctdbGetDefaultIndex failed.", 
+ *                ctdbGetError(ctrec->handle));
+ *
+ *    if((index = ctdbGetIndex(*ctrec->table_ptr, i)) == NULL)
+ *        rb_raise(cCTError, "[%d] ctdbGetIndex failed.",
+ *                ctdbGetError(ctrec->handle));
+ *
+ *    count = ctdbGetIndexSegmentCount(index);
+ *    for(j = 0; j < count; j++){
+ *        if((segment = ctdbGetSegment(index, j)) == NULL)
+ *            rb_raise(cCTError, "[%d] ctdbGetSegment failed.", 
+ *                    ctdbGetError(index));
+ *        
+ *        // TODO: DRY up old style absolute byte offset jazz.
+ *        mode = ctdbGetSegmentMode(segment);
+ *        if(mode == CTSEG_REGSEG || mode == CTSEG_UREGSEG){
+ *            field = ctdbGetSegmentPartialField(segment);
+ *            if(ctdbGetFieldDataLength(ctrec->handle, ctdbGetFieldNbr(field)) > 0)
+ *                len += ctdbGetFieldLength(field);
+ *            len--;
+ *        } else {
+ *            field = ctdbGetSegmentField(segment);
+ *            if(ctdbGetFieldDataLength(ctrec->handle, ctdbGetFieldNbr(field)) > 0)
+ *                len += ctdbGetFieldLength(field);
+ *        }
+ *        printf("field name[%s] length[%d] len[%d]\n", ctdbGetFieldName(field), ctdbGetFieldLength(field), len);
+ *    }
+ */
 
-    printf("default index[%s]\n", ctdbGetDefaultIndexName(ctrec->handle));
-    if((index = ctdbGetIndex(*ctrec->table_ptr, i)) == NULL)
-        rb_raise(cCTError, "[%d] ctdbGetIndex failed.",
-                ctdbGetError(ctrec->handle));
-
-    count = ctdbGetIndexSegmentCount(index);
-    printf("count[%d] name[%s]\n", count, ctdbGetIndexName(index));
-    for(j = 0; j < count; j++){
-        if((segment = ctdbGetSegment(index, j)) == NULL)
-            rb_raise(cCTError, "[%d] ctdbGetSegment failed.", 
-                    ctdbGetError(index));
-        
-        // TODO: DRY up old style absolute byte offset jazz.
-        mode = ctdbGetSegmentMode(segment);
-        if(mode == CTSEG_REGSEG || mode == CTSEG_UREGSEG)
-            field = ctdbGetSegmentPartialField(segment);
-        else
-            field = ctdbGetSegmentField(segment);
-
-        /*
-         *printf("==> [%d][%s]\n", j, ctdbGetSegmentFieldName(segment)); 
-         *if((field = ctdbGetSegmentField(segment)) == NULL)
-         *    rb_raise(cCTError, "[%d] ctdbGetSegmentField failed.",
-         *            ctdbGetError(segment));
-         */
-
-        if(ctdbGetFieldDataLength(ctrec->handle, ctdbGetFieldNbr(field)) > 0)
-            len += ctdbGetFieldLength(field);
-    }
-
-
-    if(ctdbRecordSetOn(ctrec->handle, len) != CTDBRET_OK)
+    if(ctdbRecordSetOn(ctrec->handle, FIX2INT(bytes)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbRecordSetOn failed.", 
                 ctdbGetError(ctrec->handle));
 
@@ -2661,6 +2677,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTField, "type", rb_ctdb_field_get_type, 0);
     rb_define_method(cCTField, "type=", rb_ctdb_field_set_type, 1);
     // rb_define_method(cCTField, "variable_length?", rb_ctdb_field_is_variable, 0);
+    rb_define_method(cCTField, "numeric?", rb_ctdb_field_is_numeric, 0);
 
     // CT::Index
     cCTIndex = rb_define_class_under(mCT, "Index", rb_cObject);
@@ -2727,7 +2744,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "set_field_as_time", rb_ctdb_record_set_field_as_time, 2);
     rb_define_method(cCTRecord, "set_field_as_unsigned", rb_ctdb_record_set_field_as_unsigned, 2);
     rb_define_method(cCTRecord, "set?", rb_ctdb_record_is_set, 0);
-    rb_define_method(cCTRecord, "set_on", rb_ctdb_record_set_on, 0);
+    rb_define_method(cCTRecord, "set_on", rb_ctdb_record_set_on, 1);
     rb_define_method(cCTRecord, "set_off", rb_ctdb_record_set_off, 0);
     rb_define_method(cCTRecord, "write!", rb_ctdb_record_write_bang, 0);
 }

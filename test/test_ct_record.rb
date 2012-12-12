@@ -197,7 +197,9 @@ class TestCTRecord < Test::Unit::TestCase
   end
 
   def test_record_set
-
+    assert_nothing_raised { @rec = CT::Record.new(@table) }
+    assert_nothing_raised { @rec.clear }
+    
   end
 
   # def test_unique_index_error
