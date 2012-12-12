@@ -22,7 +22,7 @@ end
 ct_dir   = with_config('faircom-dir')
 api_dir  = case RUBY_PLATFORM
 when /darwin/ then %w(ctree.ctdb multithreaded static).join(File::SEPARATOR)
-when /linux/  then %w(ctree.ctdb multithreaded dynamic).join(File::SEPARATOR)
+when /linux/  then %w(ctree.ctdb multithreaded static).join(File::SEPARATOR)
 else
   puts "Unhandled platform `#{RUBY_PLATFORM}'"
   exit 1

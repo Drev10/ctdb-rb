@@ -1657,64 +1657,50 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
             break;
     }
     
-    if(ctdbGetFieldAsUnsigned(ct->handle, i, &uvalue) == CTDBRET_OK){
       
-        field = ctdbGetField(*ct->table_ptr, i);
-        dtype = ctdbGetFieldDefaultDateType(field);
+    field = ctdbGetField(*ct->table_ptr, i);
+    dtype = ctdbGetFieldDefaultDateType(field);
 
-        switch(dtype) {
-            case CTDATE_MDCY :
-                format = (char *)"%m/%d/%Y";
-                break;
-            case CTDATE_DMCY : 
-                format = (char *)"%m/%d/%y";
-                break;
-            case CTDATE_CYMD :
-                format = (char *)"%d/%m/%Y";
-                break;
-            case CTDATE_MDY :
-                format = (char *)"%d/%m/%y";
-                break;
-            case CTDATE_DMY :
-                format = (char *)"%Y%m%d";
-                break;
-            case CTDATE_YMD :
-                format = (char *)"%y%m%d";
-                break;
-            default :
-                rb_raise(cCTError, "Unexpected default date format for field `%s'",
-                    ctdbGetFieldName(field));
-                break;
-        }
-        
-        if(ctdbGetFieldAsDate(ct->handle, i, &value) != CTDBRET_OK)
-            rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", 
-                ctdbGetError(ct->handle));
+    switch(dtype) {
+        case CTDATE_MDCY :
+            format = (char *)"%m/%d/%Y";
+            break;
+        case CTDATE_DMCY : 
+            format = (char *)"%m/%d/%y";
+            break;
+        case CTDATE_CYMD :
+            format = (char *)"%d/%m/%Y";
+            break;
+        case CTDATE_MDY :
+            format = (char *)"%d/%m/%y";
+            break;
+        case CTDATE_DMY :
+            format = (char *)"%Y%m%d";
+            break;
+        case CTDATE_YMD :
+            format = (char *)"%y%m%d";
+            break;
+        default :
+            rb_raise(cCTError, "Unexpected default date format for field `%s'",
+                ctdbGetFieldName(field));
+            break;
+    }
+    
+    if(ctdbGetFieldAsDate(ct->handle, i, &value) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", 
+            ctdbGetError(ct->handle));
 
-        /*
-         *if((rc = ctdbDateUnpack(value, &y, &m, &d)) != CTDBRET_OK)
-         *    rb_raise(cCTError, "[%d] ctdbDateUnpack failed rc `%d'.", 
-         *        ctdbGetError(*cth), rc); 
-         *
-         *
-         *rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
-         *        INT2FIX(y), INT2FIX(m), INT2FIX(d));
-         */
-
+    if(value > 0){
         size = (strlen(format) + 3);
-        /*
-         *printf("-> size[%d] format[%s] type[%d] [%d]\n", size, format, dtype, value);
-         */
         if((rc = ctdbDateToString((CTDATE)value, dtype, &cdt, size)) != CTDBRET_OK)
             rb_raise(cCTError, "[%d] ctdbDateToString failed for `%s'.", rc, 
                     ctdbGetFieldName(field));
         
         rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("strptime"), 2, 
                 rb_str_new_cstr(&cdt), rb_str_new_cstr(format));
-        
-    } else {
+    } else
         rbdt = INT2FIX(0);
-    }
+   
     
     return rbdt;
 }
