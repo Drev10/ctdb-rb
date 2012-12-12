@@ -84,8 +84,6 @@ class TestCTTable < Test::Unit::TestCase
     end
     assert_instance_of(CT::Segment, @segment)
     assert_nothing_raised { @table.close }
-
-  
   end
 
   def test_table_attributes
