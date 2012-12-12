@@ -489,6 +489,32 @@ rb_ctdb_table_get_index(VALUE self, VALUE value)
 }
 
 /*
+ * Retrieve a collection of all indecies associated with a table.
+ * @return [Array]
+ */
+static VALUE
+rb_ctdb_table_get_indecies(VALUE self)
+{
+    int j;          // Random ass counter
+    VRLEN count;    // Number of indecies associated with the table
+    VALUE indecies; // Ruby Array of CT::Index objects
+    CTHANDLE index; // Index handle
+    pCTHANDLE cth = CTH(self);
+
+    indecies = rb_ary_new();
+
+    count = ctdbGetTableIndexCount(*cth);
+    for(j = 0; j < count; j++){
+        if((index = ctdbGetIndex(*cth, j)) == NULL)
+            rb_raise(cCTError, "[%d] ctdbGetIndex failed.", ctGetError(*cth));
+
+        rb_ary_push(indecies, rb_ctdb_index_new(cCTIndex, index));  
+    }
+
+    return indecies;
+}
+
+/*
  * Rebuild existing table based on field, index and segment changes.
  *
  * @param [Fixnum] mode The alter table action
@@ -2618,7 +2644,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTTable, "add_field", rb_ctdb_table_add_field, 3);
     rb_define_method(cCTTable, "add_index", rb_ctdb_table_add_index, 2);
     rb_define_method(cCTTable, "get_index", rb_ctdb_table_get_index, 1);
-    //rb_define_method(cCTTable, "indecies", rb_ctdb_table_get_indecies, 0); 
+    rb_define_method(cCTTable, "indecies", rb_ctdb_table_get_indecies, 0); 
     rb_define_method(cCTTable, "alter", rb_ctdb_table_alter, 1);
     rb_define_method(cCTTable, "close", rb_ctdb_table_close, 0);
     rb_define_method(cCTTable, "create", rb_ctdb_table_create, 2);

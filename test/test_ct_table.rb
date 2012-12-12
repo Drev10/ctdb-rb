@@ -68,6 +68,11 @@ class TestCTTable < Test::Unit::TestCase
       @table.open(_c[:table_name], CT::OPEN_NORMAL)
     end
     assert_nothing_raised do
+      @indecies = @table.indecies
+    end
+    assert_instance_of(Array, @indecies)
+    assert_equal(1, @indecies.size)
+    assert_nothing_raised do
       @index = @table.get_index(_c[:index_name])    
     end
     assert_instance_of(CT::Index, @index)
@@ -79,6 +84,8 @@ class TestCTTable < Test::Unit::TestCase
     end
     assert_instance_of(CT::Segment, @segment)
     assert_nothing_raised { @table.close }
+
+  
   end
 
   def test_table_attributes
