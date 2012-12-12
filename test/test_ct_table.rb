@@ -43,7 +43,6 @@ class TestCTTable < Test::Unit::TestCase
 
     assert_nothing_raised { @table.path = _c[:table_path] }
     assert_nothing_raised { @table.create(_c[:table_name], CT::CREATE_NORMAL) }
-    assert_nothing_raised { @session.logout }
   end
 
   def test_create_index
@@ -61,6 +60,24 @@ class TestCTTable < Test::Unit::TestCase
     assert_nothing_raised { @index.allow_dups = false }
     assert_nothing_raised { @index.add_segment(@field, CT::SEG_SCHSRL) }
     assert_nothing_raised { @table.alter(CT::DB_ALTER_NORMAL) }
+    assert_nothing_raised { @table.close }
+    
+    assert_nothing_raised do
+      @table = CT::Table.new(@session)
+      @table.path = _c[:table_path]
+      @table.open(_c[:table_name], CT::OPEN_NORMAL)
+    end
+    assert_nothing_raised do
+      @index = @table.get_index(_c[:index_name])    
+    end
+    assert_instance_of(CT::Index, @index)
+    assert_equal(_c[:index_name], @index.name)
+    assert_instance_of(Array, @index.segments)
+    assert_equal(1, @index.segments.size)
+    assert_nothing_raised do
+      @segment = @index.segments.first
+    end
+    assert_instance_of(CT::Segment, @segment)
     assert_nothing_raised { @table.close }
   end
 

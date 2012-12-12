@@ -35,8 +35,10 @@ VALUE cCTField;    // CT::Field
 
 // TODO: #define rb_define_ct_const(s, c) rb_define_const(mCT, #s, INT2NUM(c))
 
+// TODO: ctdb.h jazz
 VALUE rb_ctdb_field_new(VALUE klass, CTHANDLE field);
 VALUE rb_ctdb_index_new(VALUE klass, CTHANDLE index);
+VALUE rb_ctdb_segment_new(VALUE klass, CTHANDLE segment);
 
 // ============================
 // = CT::Session && CT::Table =
@@ -453,6 +455,37 @@ rb_ctdb_table_add_index(VALUE self, VALUE name, VALUE type)/*, VALUE opts)*/
     ct_index = rb_ctdb_index_new(cCTIndex, index);
 
     return ct_index;
+}
+
+/*
+ * Retrieve an Index by name or number.
+ *
+ * @param [Fixnum, String] value Field identifier
+ * @return [CT::Index]
+ */
+static VALUE
+rb_ctdb_table_get_index(VALUE self, VALUE value)
+{
+    pCTHANDLE cth = CTH(self);
+    CTHANDLE index;
+
+    switch(rb_type(value)){
+        case T_STRING :
+            index = ctdbGetIndexByName(*cth, RSTRING_PTR(value));
+            break;
+        case T_FIXNUM :
+            index = ctdbGetIndex(*cth, FIX2INT(value));
+            break;
+        default :
+            rb_raise(rb_eArgError, "Unexpected value type `%s'",
+                rb_obj_classname(value));
+            break;
+    }
+
+    if(!index)
+        rb_raise(cCTError, "[%d] ctdbGetIndex failed.", ctdbGetError(*cth));
+
+    return rb_ctdb_index_new(cCTIndex, index);
 }
 
 /*
@@ -1138,6 +1171,32 @@ rb_ctdb_index_get_name(VALUE self)
 }
 
 /*
+ * Retrieve an Array of all Index Segments.
+ * @return [Array]
+ */
+static VALUE
+rb_ctdb_index_get_segments(VALUE self)
+{
+    pCTHANDLE cth;
+    VRLEN cnt;
+    int j;
+    VALUE segments;
+
+    cth = CTH(self);
+    segments = rb_ary_new();
+
+    if((cnt = ctdbGetIndexSegmentCount(*cth)) == -1)
+        rb_raise(cCTError, "[%d] ctdbGetIndexSegmentCount failed.", 
+                ctdbGetError(*cth), cnt);
+
+    for(j = 0; j < cnt; j++)
+        rb_ary_push(segments, 
+                rb_ctdb_segment_new(cCTSegment, ctdbGetSegment(*cth, j))); 
+    
+    return segments;
+}
+
+/*
  * Retrieve the key length for this index.
  *
  * @return [Fixnum, nil]
@@ -1207,7 +1266,7 @@ rb_ctdb_segment_get_field_name(VALUE self)
 static VALUE
 rb_ctdb_segment_get_mode(VALUE self)
 {
-    return self;
+    return INT2FIX(ctdbGetSegmentMode(CTH(self)));
 }
 
 static VALUE
@@ -1236,6 +1295,22 @@ rb_ctdb_segment_get_status(VALUE self)
 {
     // TODO: rb_ctdb_segment_get_status
     return self;
+}
+
+/*
+ * Hack to identify old school Segments
+ */
+static VALUE
+rb_ctdb_segment_absolute_byte_offset(VALUE self)
+{
+    CTSEG_MODE mode;
+    
+    mode = ctdbGetSegmentMode(CTH(self));
+    if(mode == CTSEG_REGSEG || mode == CTSEG_UREGSEG || CTSEG_INTSEG ||
+            mode == CTSEG_SGNSEG || mode == CTSEG_FLTSEG)
+        return Qtrue;
+    else
+        return Qfalse;
 }
 
 // ==============
@@ -1473,9 +1548,13 @@ rb_ctdb_record_get_field(VALUE self, VALUE field_name)
         case CT_DATE :
             rb_value = rb_funcall(self, rb_intern("get_field_as_date"), 1, field_name);
             break;
-        case CT_MONEY :
-        case CT_TIME :
         case CT_FLOAT :
+            rb_value = rb_funcall(self, rb_intern("get_field_as_float"), 1, field_name);
+            break;
+        case CT_MONEY :
+            rb_value = rb_funcall(self, rb_intern("get_field_as_money"), 1, field_name);
+            break;
+        case CT_TIME :
         case CT_DOUBLE :
         case CT_TIMESTAMP :
         case CT_EFLOAT :
@@ -1564,37 +1643,8 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
     
     if(ctdbGetFieldAsUnsigned(ct->handle, i, &uvalue) == CTDBRET_OK){
       
-        if(ctdbGetFieldAsDate(ct->handle, i, &value) != CTDBRET_OK)
-            rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", 
-                ctdbGetError(ct->handle));
-
-        /*
-         *if((rc = ctdbDateUnpack(value, &y, &m, &d)) != CTDBRET_OK)
-         *    rb_raise(cCTError, "[%d] ctdbDateUnpack failed rc `%d'.", 
-         *        ctdbGetError(*cth), rc); 
-         *
-         *
-         *rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
-         *        INT2FIX(y), INT2FIX(m), INT2FIX(d));
-         */
-        
-        field = ctdbGetField(ct->table_ptr, i);
+        field = ctdbGetField(*ct->table_ptr, i);
         dtype = ctdbGetFieldDefaultDateType(field);
-
-        /*
-         *switch(dtype) {
-         *    case CTDATE_MDCY :
-         *    case CTDATE_DMCY :
-         *    case CTDATE_CYMD :
-         *        size = 10;
-         *        break;
-         *    case CTDATE_MDY :
-         *    case CTDATE_DMY :
-         *    case CTDATE_YMD :
-         *        size = 8;
-         *        break;
-         *}
-         */
 
         switch(dtype) {
             case CTDATE_MDCY :
@@ -1615,11 +1665,31 @@ rb_ctdb_record_get_field_as_date(VALUE self, VALUE id)
             case CTDATE_YMD :
                 format = (char *)"%y%m%d";
                 break;
+            default :
+                rb_raise(cCTError, "Unexpected default date format for field `%s'",
+                    ctdbGetFieldName(field));
+                break;
         }
+        
+        if(ctdbGetFieldAsDate(ct->handle, i, &value) != CTDBRET_OK)
+            rb_raise(cCTError, "[%d] ctdbGetFieldAsDate failed.", 
+                ctdbGetError(ct->handle));
+
+        /*
+         *if((rc = ctdbDateUnpack(value, &y, &m, &d)) != CTDBRET_OK)
+         *    rb_raise(cCTError, "[%d] ctdbDateUnpack failed rc `%d'.", 
+         *        ctdbGetError(*cth), rc); 
+         *
+         *
+         *rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("new"), 3, 
+         *        INT2FIX(y), INT2FIX(m), INT2FIX(d));
+         */
 
         size = (strlen(format) + 3);
-        if((rc = ctdbDateToString(value, dtype, &cdt, size)) != CTDBRET_OK)
-            rb_raise(cCTError, "[%d] ctdbDateToString failed.", rc);
+        printf("-> size[%d] format[%s] type[%d] [%d]\n", size, format, dtype, value);
+        if((rc = ctdbDateToString((CTDATE)value, dtype, &cdt, size)) != CTDBRET_OK)
+            rb_raise(cCTError, "[%d] ctdbDateToString failed for `%s'.", rc, 
+                    ctdbGetFieldName(field));
         
         rbdt = rb_funcall(RUBY_CLASS("Date"), rb_intern("strptime"), 2, 
                 rb_str_new_cstr(&cdt), rb_str_new_cstr(format));
@@ -2356,6 +2426,9 @@ rb_ctdb_record_set_on(VALUE self)
         rb_raise(cCTError, "[%d] ctdbGetIndexKeyLength failed.", 
                 ctdbGetError(ctrec->handle));
 
+
+
+
     if(ctdbRecordSetOn(ctrec->handle, len) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbRecordSetOn failed.", 
                 ctdbGetError(ctrec->handle));
@@ -2517,6 +2590,8 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTTable, "initialize", rb_ctdb_table_init, 1);
     rb_define_method(cCTTable, "add_field", rb_ctdb_table_add_field, 3);
     rb_define_method(cCTTable, "add_index", rb_ctdb_table_add_index, 2);
+    rb_define_method(cCTTable, "get_index", rb_ctdb_table_get_index, 1);
+    //rb_define_method(cCTTable, "indecies", rb_ctdb_table_get_indecies, 0); 
     rb_define_method(cCTTable, "alter", rb_ctdb_table_alter, 1);
     rb_define_method(cCTTable, "close", rb_ctdb_table_close, 0);
     rb_define_method(cCTTable, "create", rb_ctdb_table_create, 2);
@@ -2529,8 +2604,6 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTTable, "get_field", rb_ctdb_table_get_field, 1);
     rb_define_method(cCTTable, "get_fields", rb_ctdb_table_get_fields, 0);
     rb_define_method(cCTTable, "get_field_by_name", rb_ctdb_table_get_field_by_name, 1);
-    // rb_define_method(cCTTable, "indecies", rb_ctdb_table_get_indecies, 0);
-    // rb_define_method(cCTTable, "index", rb_ctdb_table_get_index, 1);
     rb_define_method(cCTTable, "name", rb_ctdb_table_get_name, 0);
     rb_define_method(cCTTable, "open", rb_ctdb_table_open, 2);
     rb_define_method(cCTTable, "active?", rb_ctdb_table_is_active, 0);
@@ -2573,6 +2646,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTIndex, "key_length", rb_ctdb_index_get_key_length, 0);
     rb_define_method(cCTIndex, "key_type",   rb_ctdb_index_get_key_type, 0);
     rb_define_method(cCTIndex, "name", rb_ctdb_index_get_name, 0);
+    rb_define_method(cCTIndex, "segments", rb_ctdb_index_get_segments, 0);
     // rb_define_method(cCTIndex, "number", rb_ctdb_index_get_number, 0);
 
     // CT::Segment
@@ -2586,6 +2660,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTSegment, "move", rb_ctdb_segment_move, 1);
     rb_define_method(cCTSegment, "number", rb_ctdb_segment_get_number, 1);
     rb_define_method(cCTSegment, "status", rb_ctdb_segment_get_status, 0);
+    rb_define_method(cCTSegment, "absolute_byte_offset?", rb_ctdb_segment_absolute_byte_offset, 0);
 
     // CT::Record
     cCTRecord = rb_define_class_under(mCT, "Record", rb_cObject);
@@ -2606,6 +2681,7 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "get_field_as_bool", rb_ctdb_record_get_field_as_bool, 1);
     rb_define_method(cCTRecord, "get_field_as_date", rb_ctdb_record_get_field_as_date, 1);
     rb_define_method(cCTRecord, "get_field_as_float", rb_ctdb_record_get_field_as_float, 1);
+    rb_define_alias(cCTRecord, "get_field_as_money", "get_field_as_float");
     rb_define_method(cCTRecord, "get_field_as_signed", rb_ctdb_record_get_field_as_signed, 1);
     rb_define_method(cCTRecord, "get_field_as_string", rb_ctdb_record_get_field_as_string, 1);
     rb_define_method(cCTRecord, "get_field_as_time", rb_ctdb_record_get_field_as_time, 1);
