@@ -43,6 +43,24 @@ record.find(CT::FIND_EQ)
 puts record.get_field_as_unsigned('id') # => 123
 ```
 
+Record sets!
+
+```ruby
+record = CT::Record.new(table)
+record.clear
+record.set_default_index("foo_ndx")
+record.set_field_as_string("foo", "bar")
+
+bytes = 0
+record.get_default_index.segments.each do |segment|
+  bytes += segment.field.length
+end
+record.set_on(bytes)
+record.first
+begin
+  p record
+end while record.next
+```
 
 ### Cleanup
 
