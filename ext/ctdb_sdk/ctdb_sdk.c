@@ -1418,6 +1418,15 @@ rb_ctdb_record_init(VALUE self, VALUE table)
 }
 
 /*
+ * Check the internal new record flag.
+ */
+static VALUE
+rb_ctdb_record_is_new(VALUE self)
+{
+    return ((ctdbIsNewRecord(*CTH(self)) == YES) ? Qtrue : Qfalse);
+}
+
+/*
  * Clear the record buffer.
  *
  * @raise [CT::Error] ctdbClearRecord failed.
@@ -2573,7 +2582,7 @@ rb_ctdb_date_new(VALUE klass, VALUE year, VALUE month, VALUE day)
 
     if((rc = ctdbDatePack(&date, y, m, d)) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbDatePack failed.", rc);
-    
+   
     obj = Data_Make_Struct(klass, struct ctdate, 0, free_rb_ctdb_date, ct); 
     ct->value = date;
     
@@ -2620,9 +2629,9 @@ rb_ctdb_date_to_string(VALUE self)
     char str[10];
 
     sprintf(str, "%d-%d-%d", 
-            rb_funcall(self, rb_intern("year")), 
-            rb_funcall(self, rb_intern("month")),
-            rb_funcall(self, rb_intern("day"));
+            FIX2INT(rb_funcall(self, rb_intern("year"), 0)), 
+            FIX2INT(rb_funcall(self, rb_intern("month"), 0)),
+            FIX2INT(rb_funcall(self, rb_intern("day"), 0)));
     
     return rb_str_new_cstr(str);
 }
@@ -2912,6 +2921,7 @@ Init_ctdb_sdk(void)
     cCTRecord = rb_define_class_under(mCT, "Record", rb_cObject);
     rb_define_singleton_method(cCTRecord, "new", rb_ctdb_record_new, 1);
     rb_define_method(cCTRecord, "initialize", rb_ctdb_record_init, 1);
+    rb_define_method(cCTRecord, "new_record?", rb_ctdb_record_is_new, 0);
     rb_define_method(cCTRecord, "clear", rb_ctdb_record_clear, 0);
     rb_define_method(cCTRecord, "count", rb_ctdb_record_get_count, 0);
     rb_define_method(cCTRecord, "default_index", rb_ctdb_record_get_default_index, 0);
