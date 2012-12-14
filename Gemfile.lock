@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    ctdb (1.9.1)
+    ctdb (1.10.0)
 
 GEM
   remote: http://rubygems.org/
