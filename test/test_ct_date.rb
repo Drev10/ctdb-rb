@@ -1,7 +1,7 @@
 require File.dirname(__FILE__) + '/test_helper'
 require 'date'
 
-class TestDate < Test::Unit::TestCase
+class TestCTDate < Test::Unit::TestCase
 
   def setup
     @month, @day, @year = 1, 10, 1984
@@ -51,4 +51,9 @@ class TestDate < Test::Unit::TestCase
     assert_instance_of(CT::Date, @date)
   end
 
+  def test_to_s
+    assert_nothing_raised do
+
+    end
+  end
 end
