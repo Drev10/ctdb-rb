@@ -2531,6 +2531,29 @@ rb_ctdb_record_set_off(VALUE self)
 }
 
 /*
+ *
+ */
+static VALUE
+rb_ctdb_record_unlock(VALUE self)
+{
+    return ((ctdbUnlockRecord(*CTH(self)) == CTDBRET_OK) ? Qtrue : Qfalse);
+}
+
+/*
+ *
+ *
+ */
+static VALUE
+rb_ctdb_record_unlock_bang(VALUE self)
+{
+    pCTHANDLE cth = CTH(self);
+    if(ctdbUnlockRecord(*cth) != CTDBRET_OK)
+        rb_raise(cCTError, "[%d] ctdbUnlockRecord failed.", ctdbGetError(*cth));
+
+    return Qtrue;
+}
+
+/*
  * Create or update an existing record.
  *
  * @raise [CT::Error] ctdbWriteRecord failed.
@@ -2960,6 +2983,8 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "set?", rb_ctdb_record_is_set, 0);
     rb_define_method(cCTRecord, "set_on", rb_ctdb_record_set_on, 1);
     rb_define_method(cCTRecord, "set_off", rb_ctdb_record_set_off, 0);
+    rb_define_method(cCTRecord, "unlock", rb_ctdb_record_unlock, 0);
+    rb_define_method(cCTRecord, "unlock!", rb_ctdb_record_unlock_bang, 0);
     rb_define_method(cCTRecord, "write!", rb_ctdb_record_write_bang, 0);
 
     // CT::Date
