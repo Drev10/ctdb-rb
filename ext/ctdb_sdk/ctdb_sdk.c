@@ -1956,6 +1956,16 @@ rb_ctdb_record_get_field_as_unsigned(VALUE self, VALUE id)
 }
 
 /*
+ * Retrieve the CT::Record lock status.
+ * @return [Symbol, nil]
+ */
+static VALUE
+rb_ctdb_record_get_lock_mode(VALUE self)
+{
+    return INT2FIX(ctdbGetRecordLock(*CTH(self)));
+}
+
+/*
  * Get the last record on a table.
  *
  * @return [CT::Record, nil]
@@ -2006,6 +2016,33 @@ rb_ctdb_record_lock_bang(VALUE self, VALUE mode)
         rb_raise(cCTError, "[%d] ctdbLockRecord failed.", ctdbGetError(*cth));
 
     return self;
+}
+
+/*
+ * Has CT::Record#lock been executed on this resource.
+ */
+static VALUE
+rb_ctdb_record_is_locked(VALUE self)
+{
+    return ((ctdbGetRecordLock(*CTH(self)) != CTLOCK_FREE) ? Qtrue : Qfalse);
+}
+
+/*
+ * Has CT::Record#lock(CT::LOCK_WRITE) been executed
+ */
+static VALUE
+rb_ctdb_record_is_write_locked(VALUE self)
+{
+    return ((ctdbGetRecordLock(*CTH(self)) == CTLOCK_WRITE) ? Qtrue : Qfalse);
+}
+
+/*
+ * Has CT::Record#lock(CT::LOCK_READ) been executed
+ */
+static VALUE
+rb_ctdb_record_is_read_locked(VALUE self)
+{
+    return ((ctdbGetRecordLock(*CTH(self)) == CTLOCK_READ) ? Qtrue : Qfalse);
 }
 
 /*
@@ -2965,10 +3002,14 @@ Init_ctdb_sdk(void)
     rb_define_method(cCTRecord, "get_field_as_string", rb_ctdb_record_get_field_as_string, 1);
     rb_define_method(cCTRecord, "get_field_as_time", rb_ctdb_record_get_field_as_time, 1);
     rb_define_method(cCTRecord, "get_field_as_unsigned", rb_ctdb_record_get_field_as_unsigned, 1);
+    rb_define_method(cCTRecord, "get_lock_mode", rb_ctdb_record_get_lock_mode, 0);
     rb_define_method(cCTRecord, "last", rb_ctdb_record_last, 0);
     rb_define_method(cCTRecord, "last!", rb_ctdb_record_last_bang, 0);
     rb_define_method(cCTRecord, "lock", rb_ctdb_record_lock, 1);
     rb_define_method(cCTRecord, "lock!", rb_ctdb_record_lock_bang, 1);
+    rb_define_method(cCTRecord, "locked?", rb_ctdb_record_is_locked, 0);
+    rb_define_method(cCTRecord, "write_locked?", rb_ctdb_record_is_write_locked, 0);
+    rb_define_method(cCTRecord, "read_locked?", rb_ctdb_record_is_read_locked, 0);
     rb_define_method(cCTRecord, "next", rb_ctdb_record_next, 0);
     rb_define_method(cCTRecord, "prev", rb_ctdb_record_prev, 0);
     rb_define_method(cCTRecord, "set_field", rb_ctdb_record_set_field, 2);
