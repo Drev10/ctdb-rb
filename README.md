@@ -74,7 +74,7 @@ session.logout
 
 ### Contributing
 
-* Fork the project
+* Beg to be a contributor 
 * Create a topic branch
 * Hack away
 * Submit a pull request
