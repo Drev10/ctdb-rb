@@ -13,7 +13,8 @@ task :guard do
 end
 
 desc "Build the RubyGem."
-task :build do
+task :gem do
+  `rm ctdb-*.gem`
   `gem build ctdb.gemspec`
 end
 
@@ -22,7 +23,7 @@ task :tag do
   `git tag v#{CT::Version}`
 end
 
-task :publish => [:tag, :build] do
+task :publish => [:tag, :gem] do
   sh("git push origin master")
   sh("git push git@github.adfitech.com:dan/rb-ctdb.git v#{CT::Version}")
   sh("gem inabox ctdb-#{CT::Version}.gem")
