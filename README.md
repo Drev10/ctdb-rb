@@ -54,6 +54,7 @@ record.set_field_as_string("foo", "bar")
 bytes = 0
 record.get_default_index.segments.each do |segment|
   bytes += segment.field.length
+  bytes -= 1 if segment.absolute_byte_offset? # => Old school
 end
 record.set_on(bytes)
 record.first
