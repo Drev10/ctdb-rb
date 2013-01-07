@@ -1,3 +1,3 @@
 module CT
-  Version = VERSION = '1.16.0'
+  Version = VERSION = '1.16.1'
 end
