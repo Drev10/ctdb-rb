@@ -2392,13 +2392,12 @@ rb_ctdb_record_set_field_as_string(VALUE self, VALUE id, VALUE value)
         len = ctdbGetFieldLength(f);
 
         // TODO: Implement dynamic field padding with ctdbGetPadChar(*ct->table_ptr, &padc, &delimc);
-
-        while(RSTRING_LEN(value) <= len-1)
+        while(RSTRING_LEN(value) < len-1)
             rb_str_cat2(value, " ");
     }
-
+    
     if(ctdbSetFieldAsString(ct->handle, i, 
-                      (RTEST(value) ? RSTRING_PTR(value) : NULL )) != CTDBRET_OK)
+                      (RTEST(value) ? RSTRING_PTR(value) : '\0' )) != CTDBRET_OK)
         rb_raise(cCTError, "[%d] ctdbSetFieldAsString failed.", 
             ctdbGetError(ct->handle));
 
