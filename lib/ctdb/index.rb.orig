@@ -8,6 +8,9 @@ module CT
     end
 
     def inspect
+<<<<<<< HEAD
+      "<CT::Index#{object_id} @name=\"#{self.name}\" @field_names=#{self.field_names}>"
+=======
       "<CT::Index:#{object_id} @name=\"#{self.name}\" @field_names=#{self.field_names}>"
     end
 
@@ -42,6 +45,7 @@ module CT
         #allow_null: self.allow_null?,
         key_length: self.key_length,
         segments:   self.segments.collect { |segment| segment.to_h } }
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     end
 
   end

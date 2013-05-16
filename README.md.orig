@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+# rb-ctdb
+=======
 # ctdb-rb 
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
 
 A no fluff extension implementing the FairCom c-tree ctdb sdk.
 
@@ -6,6 +10,10 @@ A no fluff extension implementing the FairCom c-tree ctdb sdk.
 
 Make sure you have our internal gem repository added to your gem sources.
 
+<<<<<<< HEAD
+    $ gem sources -a http://gems.devl.adfitech.com # optional
+=======
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     $ gem install ctdb -- --with-faircom-dir=/path/to/c-treeACE
 
 ### Session
@@ -71,6 +79,11 @@ table.close
 session.logout
 ```
 
+<<<<<<< HEAD
+### Contributing
+
+* Beg to be a contributor 
+=======
 ## CT::Model
 
 "The" cTree ORM
@@ -107,6 +120,7 @@ foo = Foo.where(bar: 1234, sequence: 2)
 ### Contributing
 
 * Fork the project
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
 * Create a topic branch
 * Hack away
 * Submit a pull request

@@ -3,14 +3,28 @@ require File.dirname(__FILE__) + '/lib/ctdb/version'
 Gem::Specification.new do |s|
   s.name     = "ctdb"
   s.version  = "#{CT::Version}"
+<<<<<<< HEAD
+  s.platform = Gem::Platform::RUBY
+  s.summary  = "FairCom c-treeDB ruby SDK"
+  s.description = "No fluff c extension implementing the ctdb sdk."
+  s.homepage = "https://github.adfitech.com/dan/rb-ctdb"
+  s.email    = "it@adfitech.com"
+=======
   s.summary  = "FairCom c-treeDB ruby SDK"
   s.description = "No fluff c extension implementing the ctdb sdk."
   s.homepage = "https://github.com/drfeelngood/ctdb-rb"
   s.email    = "dan@dj-agiledev.com"
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
 
   s.authors = [ "Daniel Johnston" ]
 
   s.files       = Dir['lib/**/*.rb'] + 
+<<<<<<< HEAD
+                  Dir['ext/ctdb_sdk/*.{c,rb}']
+
+  s.extensions  = [ 'ext/ctdb_sdk/extconf.rb' ]
+
+=======
                   Dir['ext/ctdb_ext/*.{h,c,rb}']
 
   s.executables << 'ctdb'
@@ -20,4 +34,5 @@ Gem::Specification.new do |s|
 
 
   s.add_dependency "thor"
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
 end

@@ -5,7 +5,11 @@ class TestCTTable < Test::Unit::TestCase
 
   def setup
     @session = CT::Session.new(CT::SESSION_CTREE)
+<<<<<<< HEAD
+    @session.logon(_c[:engine], _c[:user], _c[:password])
+=======
     @session.logon(_c[:engine], _c[:username], _c[:password])
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
   end
 
   def teardown

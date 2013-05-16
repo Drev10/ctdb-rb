@@ -6,7 +6,11 @@ class TestCTRecord < Test::Unit::TestCase
 
   def setup
     @session = CT::Session.new(CT::SESSION_CTREE)
+<<<<<<< HEAD
+    @session.logon(_c[:engine], _c[:user], _c[:password])
+=======
     @session.logon(_c[:engine], _c[:username], _c[:password])
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     @table = CT::Table.new(@session)
     @table.path = _c[:table_path]
     @table.open(_c[:table_name], CT::OPEN_NORMAL)
@@ -143,14 +147,22 @@ class TestCTRecord < Test::Unit::TestCase
     assert_equal(x['t_integer'],   @rec.get_field_as_signed('t_integer'))
     assert_equal(x['t_uinteger'],  @rec.get_field_as_unsigned('t_uinteger'))
     # t_money: "1,000.00"
+<<<<<<< HEAD
+    assert_equal(x['t_date'],      @rec.get_field_as_date('t_date'))
+=======
     #assert_equal(x['t_date'],      @rec.get_field_as_date('t_date'))
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     # t_time: 
     # t_float: 2.75
     # t_double:
     # t_timestamp:
     # t_efloat:
     # t_binary:
+<<<<<<< HEAD
+    assert_equal(pad(x['t_chars'], 32), @rec.get_field_as_string('t_chars'))
+=======
     assert_equal(pad(x['t_chars'], 31), @rec.get_field_as_string('t_chars'))
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     # assert_equal(x['t_fpstring'],  @rec.get_field_as_string('t_fpstring'))
     # assert_equal(x['t_f2string'],  @rec.get_field_as_string('t_f2string'))
     # assert_equal(x['t_f4string'],  @rec.get_field_as_string('t_f4string'))

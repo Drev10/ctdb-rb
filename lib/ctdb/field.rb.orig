@@ -2,7 +2,11 @@ module CT
   class Field
   
     def inspect
+<<<<<<< HEAD
+      "<CT::Field#{object_id} @name=\"#{self.name}\" @type=\"#{self.human_type}\">"
+=======
       "<CT::Field:#{object_id} @name=\"#{self.name}\" @type=\"#{self.human_type}\">"
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     end
 
     def string?
@@ -25,6 +29,33 @@ module CT
 
     def human_type
       case self.type
+<<<<<<< HEAD
+      when CT::BOOL       then "BOOL" 
+      when CT::TINYINT    then "TINYINT"
+      when CT::UTINYINT   then "UTINYINT"
+      when CT::SMALLINT   then "SMALLINT"
+      when CT::USMALLINT  then "USMALLINT"
+      when CT::INTEGER    then "INTEGER"
+      when CT::UINTEGER   then "UINTEGER"
+      when CT::MONEY      then "MONEY"
+      when CT::DATE       then "DATE"
+      when CT::TIME       then "TIME"
+      when CT::FLOAT      then "FLOAT"
+      when CT::DOUBLE     then "DOUBLE"
+      when CT::TIMESTAMP  then "TIMESTAMP"
+      when CT::EFLOAT     then "EFLOAT"
+      when CT::CHARS      then "CHARS"
+      when CT::FPSTRING   then "FPSTRING"
+      when CT::F2STRING   then "F2STRING"
+      when CT::F4STRING   then "F4STRING"
+      when CT::BIGINT     then "BIGINT"
+      when CT::NUMBER     then "NUMBER"
+      when CT::CURRENCY   then "CURRENCY"
+      when CT::PSTRING    then "PSTRING"
+      when CT::VARBINARY  then "VARBINARY"
+      when CT::LVB        then "LVB"
+      when CT::VARCHAR    then "VARCHAR"
+=======
       when CT::BOOL       then "CT_BOOL" 
       when CT::TINYINT    then "CT_TINYINT"
       when CT::UTINYINT   then "CT_UTINYINT"
@@ -50,11 +81,14 @@ module CT
       when CT::VARBINARY  then "CT_VARBINARY"
       when CT::LVB        then "CT_LVB"
       when CT::VARCHAR    then "CT_VARCHAR"
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
       else
         "WTF?"
       end
     end
 
+<<<<<<< HEAD
+=======
     def to_h
       { 
         name:   self.name, 
@@ -63,5 +97,6 @@ module CT
       }
     end
 
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
   end
 end

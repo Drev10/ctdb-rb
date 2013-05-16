@@ -1,0 +1,64 @@
+require 'rake/extensiontask'
+<<<<<<< HEAD
+require 'rake/testtask'
+=======
+#require 'rake/testtask'
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
+require 'yard'
+
+$:.unshift(File.dirname(__FILE__) + '/lib')
+require 'ctdb'
+
+<<<<<<< HEAD
+Rake::ExtensionTask.new('ctdb_sdk')
+=======
+Rake::ExtensionTask.new('ctdb_ext')
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
+
+desc "Start the guard process."
+task :guard do
+  `bundle exec guard start`
+end
+
+desc "Build the RubyGem."
+task :gem do
+  `rm ctdb-*.gem`
+  `gem build ctdb.gemspec`
+end
+
+desc "Tag the project with the current version."
+task :tag do
+  `git tag v#{CT::Version}`
+end
+
+<<<<<<< HEAD
+task :publish => [:tag, :gem] do
+  sh("git push origin master")
+  sh("git push git@github.adfitech.com:dan/rb-ctdb.git v#{CT::Version}")
+  sh("gem inabox ctdb-#{CT::Version}.gem")
+end
+
+desc "Compile and run the test fixture program."
+task :fixture do
+  dir = File.join(File.dirname(__FILE__), 'test')
+  # `SRCDIR=#{dir} OUTDIR=#{dir} make -f #{dir}/Makefile`
+  `make -f#{dir}/Makefile`
+end
+
+YARD::Rake::YardocTask.new do |t|
+  t.files = ['lib/ctdb.rb', 'ext/**/*.c']
+end
+
+Rake::TestTask.new do |t|
+  t.verbose = true
+  t.test_files = [ 
+      'test/test_ct_session.rb',
+      'test/test_ct_table.rb',
+      'test/test_ct_field',
+      'test/test_ct_record' 
+  ]
+=======
+YARD::Rake::YardocTask.new do |t|
+  t.files = ['lib/**/*.rb', 'ext/**/*.c']
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
+end

@@ -5,7 +5,11 @@ class TestCTField < Test::Unit::TestCase
 
   def setup
     @session = CT::Session.new(CT::SESSION_CTREE)
+<<<<<<< HEAD
+    @session.logon(_c[:engine], _c[:user], _c[:password])
+=======
     @session.logon(_c[:engine], _c[:username], _c[:password])
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     @table = CT::Table.new(@session)
     @table.path = _c[:table_path]
     @table.open(_c[:table_name], CT::OPEN_NORMAL)
@@ -17,6 +21,12 @@ class TestCTField < Test::Unit::TestCase
   end
 
   def test_properties
+<<<<<<< HEAD
+
+
+
+=======
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     assert_nothing_raised { @field = @table.get_field_by_name("t_uinteger") }
     assert_equal(0, @field.number)
     assert_equal(CT::UINTEGER, @field.type)
@@ -24,11 +34,14 @@ class TestCTField < Test::Unit::TestCase
     assert_equal(4, @field.length)
     assert(@field.integer?)
     # assert_instance_of(Hash, @field.properties)
+<<<<<<< HEAD
+=======
     assert_equal( { number: 0, 
                     name: "t_uinteger",
                     type: "UINTEGER" ,
                     length: 4 }, @field.to_h )
 
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
 
     assert_nothing_raised { @field = @table.get_field_by_name("t_integer") }
     assert_equal(1, @field.number)
@@ -36,10 +49,13 @@ class TestCTField < Test::Unit::TestCase
     assert_equal("INTEGER", @field.human_type)
     assert_equal(4, @field.length)
     assert(@field.integer?)
+<<<<<<< HEAD
+=======
     assert_equal( { number: 1, 
                     name: "t_integer",
                     type: "INTEGER" ,
                     length: 4 }, @field.to_h )
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
 
     assert_nothing_raised { @field = @table.get_field_by_name("t_bool") }
     assert_equal(2, @field.number)

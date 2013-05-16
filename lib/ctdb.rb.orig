@@ -1,4 +1,17 @@
 begin
+<<<<<<< HEAD
+  require 'ctdb_sdk'
+rescue LoadError
+  warn "WARNING: ctdb_sdk not loaded."
+end
+
+require 'ctdb/core/date'
+require 'ctdb/version'
+require 'ctdb/error'
+require 'ctdb/index'
+require 'ctdb/field'
+require 'ctdb/record'
+=======
   require 'ctdb_ext'
 rescue LoadError
   warn "WARNING: ctdb_ext not loaded."
@@ -24,3 +37,4 @@ require 'ctdb/record'
 require 'ctdb/session_handler'
 require 'ctdb/query'
 require 'ctdb/model'
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f

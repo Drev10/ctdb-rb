@@ -1,0 +1,7 @@
+module CT
+<<<<<<< HEAD
+  Version = VERSION = '1.16.1'
+=======
+  Version = VERSION = '1.20.3'
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
+end

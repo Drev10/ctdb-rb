@@ -8,7 +8,11 @@ class TestCTSession < Test::Unit::TestCase
     assert_equal(false, @session.active?)
     assert_raise(ArgumentError){ @session.logon }
     assert_nothing_raised do
+<<<<<<< HEAD
+      @session.logon(_c[:engine], _c[:user], _c[:password])
+=======
       @session.logon(_c[:engine], _c[:username], _c[:password])
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     end
     assert(@session.active?)
     assert_nothing_raised { @session.logout }
@@ -23,4 +27,8 @@ class TestCTSession < Test::Unit::TestCase
     assert_equal(path, @session.path_prefix)
   end
 
+<<<<<<< HEAD
 end
+=======
+end
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f

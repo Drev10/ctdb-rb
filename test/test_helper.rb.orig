@@ -1,6 +1,9 @@
 require 'test/unit'
 require 'turn'
+<<<<<<< HEAD
+=======
 require 'yaml'
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
 
 $:.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 require 'ctdb'
@@ -10,7 +13,11 @@ module TestHelper
   def _c
     @_c ||= begin
       { engine: "FAIRCOMS", 
+<<<<<<< HEAD
+        user: "", 
+=======
         username: "", 
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
         password: "",
         table_path: File.dirname(__FILE__),
         table_name: 'test_ctdb_sdk',
@@ -18,6 +25,9 @@ module TestHelper
     end
   end
 
+<<<<<<< HEAD
+end
+=======
   def fixtures
     @fixtures ||= YAML.load_file(File.join(File.dirname(__FILE__), 'fixture.yml'))
   end
@@ -30,3 +40,4 @@ module TestHelper
 
 end
 
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f

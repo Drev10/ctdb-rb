@@ -2,6 +2,9 @@ module CT
   class Record
   
     def inspect
+<<<<<<< HEAD
+      "<CT::Record#{object_id} @default_index=\"#{self.default_index}\">"
+=======
       "<CT::Record:#{object_id} @default_index=\"#{self.default_index.name}\">"
     end
 
@@ -25,6 +28,7 @@ module CT
     def read_locked?
       self.locked? && ( self.lock == CT::LOCK_WRITE ||
                         self.lock == CT::LOCK_WRITE_BLOCK )
+>>>>>>> d18bd97f05bbd9287015e03c7c5eb992e96edb9f
     end
 
   end
