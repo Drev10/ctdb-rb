@@ -9,7 +9,7 @@ module CT
       self.type == CT::CHARS || self.type == CT::FPSTRING || 
           self.type == CT::F2STRING || self.type == CT::F4STRING ||
           self.type == CT::PSTRING || self.type == CT::VARCHAR ||
-          self.type == CT::LVB
+          self.type == CT::LVB || self.type == CT::VARBINARY
     end
 
     def integer?
@@ -17,6 +17,16 @@ module CT
           self.type == CT::SMALLINT || self.type == CT::USMALLINT ||
           self.type == CT::INTEGER || self.type == CT::UINTEGER ||
           self.type == CT::BIGINT || self.type == NUMBER
+    end
+
+    def unsigned_integer?
+      self.type == CT::UTINYINT || self.type == CT::USMALLINT ||
+          self.type == CT::UINTEGER
+    end
+
+    def signed_integer?
+      self.type == CT::TINYINT || self.type == CT::SMALLINT ||
+          self.type == CT::INTEGER || self.type == CT::BIGINT
     end
 
     def date?

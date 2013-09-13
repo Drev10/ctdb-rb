@@ -10,6 +10,7 @@ class TestCTRecord < Test::Unit::TestCase
     @table = CT::Table.new(@session)
     @table.path = _c[:table_path]
     @table.open(_c[:table_name], CT::OPEN_NORMAL)
+    @r = nil
   end
 
   def teardown
@@ -18,209 +19,206 @@ class TestCTRecord < Test::Unit::TestCase
   end
 
   def test_create
-    x = fixtures[0]
-    assert_nothing_raised { @r0 = CT::Record.new(@table).clear }
-    assert_nothing_raised { @r0.set_field_as_bool('t_bool', x['t_bool']) }
-    assert_nothing_raised { @r0.set_field_as_string('t_varchar', x['t_varchar']) }
-    assert_nothing_raised { @r0.set_field_as_signed('t_tinyint', x['t_tinyint']) }
-    assert_nothing_raised { @r0.set_field_as_unsigned('t_utinyint', x['t_utinyint']) }
-    assert_nothing_raised { @r0.set_field_as_signed('t_smallint', x['t_smallint']) }
-    assert_nothing_raised { @r0.set_field_as_unsigned('t_usmallint', x['t_usmallint']) }
-    assert_nothing_raised { @r0.set_field_as_signed('t_integer', x['t_integer']) }
-    assert_nothing_raised { @r0.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
-    # assert_nothing_raised { @r0.set_field_as_money('t_money', x['t_uinteger']) }
-    assert_nothing_raised { @r0.set_field_as_date('t_date', x['t_date']) }
-    assert_nothing_raised { @r0.set_field_as_time('t_time', x['t_time']) }
-    # assert_nothing_raised { @r0.set_field_as_float('t_float', x['t_float']) }
-    # assert_nothing_raised {  t_double: }
-    # assert_nothing_raised {  t_timestamp: }
-    # assert_nothing_raised {  t_efloat: }
-    # assert_nothing_raised {  t_binary: }
-    assert_nothing_raised { @r0.set_field_as_string('t_chars', x['t_chars']) }
-    assert_nothing_raised { @r0.set_field_as_string('t_fpstring', x['t_fpstring']) }
-    assert_nothing_raised { @r0.set_field_as_string('t_f2string', x['t_f2string']) }
-    assert_nothing_raised { @r0.set_field_as_string('t_f4string', x['t_f4string']) }
-    # assert_nothing_raised {  t_bigint: 2652295 }
-    # assert_nothing_raised {  t_number: 12345 }
-    # assert_nothing_raised {  t_currency: }
-    assert_nothing_raised { @r0.set_field_as_string('t_pstring', x['t_pstring']) }
-    # assert_nothing_raised { @r0.set_field_as_blob('t_varbinary', x['t_varbinary']) }
-    # assert_nothing_raised {  t_lvb: }
-    assert_nothing_raised { @r0.set_field_as_string('t_varchar', x['t_varchar']) }
-    assert_nothing_raised { @r0.write! }
+    (0..2).each do |n|
+      x  = fixtures[n]
+      m  = "fixture #{n}"
+      @r = CT::Record.new(@table).clear
+      assert_nothing_raised(m) { @r.set_field("uinteger",  x["uinteger"]  ) }
+      assert_nothing_raised(m) { @r.set_field("integer",   x["integer"]   ) }
+      assert_nothing_raised(m) { @r.set_field("bool",      x["bool"]      ) }
+      assert_nothing_raised(m) { @r.set_field("tinyint",   x["tinyint"]   ) }
+      assert_nothing_raised(m) { @r.set_field("utinyint",  x["utinyint"]  ) }
+      assert_nothing_raised(m) { @r.set_field("smallint",  x["smallint"]  ) }
+      assert_nothing_raised(m) { @r.set_field("usmallint", x["usmallint"] ) }
+      assert_nothing_raised(m) { @r.set_field("money",     x["money"]     ) }
+      assert_nothing_raised(m) { @r.set_field("date",      x["date"]      ) }
+      assert_nothing_raised(m) { @r.set_field("time",      x["time"]      ) }
+      assert_nothing_raised(m) { @r.set_field("float",     x["float"]     ) }
+      assert_nothing_raised(m) { @r.set_field("double",    x["double"]    ) }
+      assert_nothing_raised(m) { @r.set_field("timestamp", x["timestamp"] ) }
+      #assert_nothing_raised(m) { @r.set_field("efloat",    x["efloat"]    ) }
+      assert_nothing_raised(m) { @r.set_field("binary",    x["binary"]    ) }
+      assert_nothing_raised(m) { @r.set_field("chars",     x["chars"]     ) }
+      assert_nothing_raised(m) { @r.set_field("fpstring",  x["fpstring"]  ) }
+      assert_nothing_raised(m) { @r.set_field("f2string",  x["f2string"]  ) }
+      assert_nothing_raised(m) { @r.set_field("f4string",  x["f4string"]  ) }
+      assert_nothing_raised(m) { @r.set_field("bigint",    x["bigint"]    ) }
+      #assert_nothing_raised(m) { @r.set_field("number",    x["number"]    ) }
+      assert_nothing_raised(m) { @r.set_field("currency",  x["currency"]  ) }
+      assert_nothing_raised(m) { @r.set_field("pstring",   x["pstring"]   ) }
+      #assert_nothing_raised(m) { @r.set_field("varbinary", x["varbinary"] ) }
+      #assert_nothing_raised(m) { @r.set_field("lvb",       x["lvb"]       ) }
+      assert_nothing_raised(m) { @r.set_field("varchar",   x["varchar"]   ) }
+      assert_nothing_raised { @r.write! }
+    end
 
-    x = fixtures[1]
-    assert_nothing_raised { @r1 = CT::Record.new(@table).clear }
-    assert_nothing_raised { @r1.set_field_as_bool('t_bool', x['t_bool']) }
-    assert_nothing_raised { @r1.set_field_as_string('t_varchar', x['t_varchar']) }
-    assert_nothing_raised { @r1.set_field_as_signed('t_tinyint', x['t_tinyint']) }
-    assert_nothing_raised { @r1.set_field_as_unsigned('t_utinyint', x['t_utinyint']) }
-    assert_nothing_raised { @r1.set_field_as_signed('t_smallint', x['t_smallint']) }
-    assert_nothing_raised { @r1.set_field_as_unsigned('t_usmallint', x['t_usmallint']) }
-    assert_nothing_raised { @r1.set_field_as_signed('t_integer', x['t_integer']) }
-    assert_nothing_raised { @r1.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
-    # assert_nothing_raised { @r1.set_field_as_money('t_money', x['t_uinteger']) }
-    assert_nothing_raised { @r1.set_field_as_date('t_date', x['t_date']) }
-    # assert_nothing_raised {  t_time:  }
-    # assert_nothing_raised { @r1.set_field_as_float('t_float', x['t_float']) }
-    # assert_nothing_raised {  t_double: }
-    # assert_nothing_raised {  t_timestamp: }
-    # assert_nothing_raised {  t_efloat: }
-    # assert_nothing_raised {  t_binary: }
-    assert_nothing_raised { @r1.set_field_as_string('t_chars', x['t_chars']) }
-    assert_nothing_raised { @r1.set_field_as_string('t_fpstring', x['t_fpstring']) }
-    assert_nothing_raised { @r1.set_field_as_string('t_f2string', x['t_f2string']) }
-    assert_nothing_raised { @r1.set_field_as_string('t_f4string', x['t_f4string']) }
-    # assert_nothing_raised {  t_bigint: 2652295 }
-    # assert_nothing_raised {  t_number: 12345 }
-    # assert_nothing_raised {  t_currency: }
-    assert_nothing_raised { @r1.set_field_as_string('t_pstring', x['t_pstring']) }
-    # assert_nothing_raised { @r1.set_field_as_blob('t_varbinary', x['t_varbinary']) }
-    # assert_nothing_raised {  t_lvb: }
-    assert_nothing_raised { @r1.set_field_as_string('t_varchar', x['t_varchar']) }
-    assert_nothing_raised { @r1.write! }
-
-    x = fixtures[2]
-    assert_nothing_raised { @r2 = CT::Record.new(@table).clear }
-    assert_nothing_raised { @r2.set_field_as_bool('t_bool', x['t_bool']) }
-    assert_nothing_raised { @r2.set_field_as_string('t_varchar', x['t_varchar']) }
-    assert_nothing_raised { @r2.set_field_as_signed('t_tinyint', x['t_tinyint']) }
-    assert_nothing_raised { @r2.set_field_as_unsigned('t_utinyint', x['t_utinyint']) }
-    assert_nothing_raised { @r2.set_field_as_signed('t_smallint', x['t_smallint']) }
-    assert_nothing_raised { @r2.set_field_as_unsigned('t_usmallint', x['t_usmallint']) }
-    assert_nothing_raised { @r2.set_field_as_signed('t_integer', x['t_integer']) }
-    assert_nothing_raised { @r2.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
-    # assert_nothing_raised { @r2.set_field_as_money('t_money', x['t_uinteger']) }
-    assert_nothing_raised { @r2.set_field_as_date('t_date', x['t_date']) }
-    # assert_nothing_raised {  t_time:  }
-    # assert_nothing_raised { @r2.set_field_as_float('t_float', x['t_float']) }
-    # assert_nothing_raised {  t_double: }
-    # assert_nothing_raised {  t_timestamp: }
-    # assert_nothing_raised {  t_efloat: }
-    # assert_nothing_raised {  t_binary: }
-    assert_nothing_raised { @r2.set_field_as_string('t_chars', x['t_chars']) }
-    assert_nothing_raised { @r2.set_field_as_string('t_fpstring', x['t_fpstring']) }
-    assert_nothing_raised { @r2.set_field_as_string('t_f2string', x['t_f2string']) }
-    assert_nothing_raised { @r2.set_field_as_string('t_f4string', x['t_f4string']) }
-    # assert_nothing_raised {  t_bigint: 2652295 }
-    # assert_nothing_raised {  t_number: 12345 }
-    # assert_nothing_raised {  t_currency: }
-    assert_nothing_raised { @r2.set_field_as_string('t_pstring', x['t_pstring']) }
-    # assert_nothing_raised { @r2.set_field_as_blob('t_varbinary', x['t_varbinary']) }
-    # assert_nothing_raised {  t_lvb: }
-    assert_nothing_raised { @r2.set_field_as_string('t_varchar', x['t_varchar']) }
-    assert_nothing_raised { @r2.write! }
-
-    assert_equal(3, @r2.count)
+    assert_equal(3, @r.count)
   end
 
   def test_find_eq
     x = fixtures[1]
-    assert_nothing_raised { @rec = CT::Record.new(@table) }
-    assert_nothing_raised { @rec.clear }
+    assert_nothing_raised { @r = CT::Record.new(@table) }
+    assert_nothing_raised { @r.clear }
 
-    assert_nothing_raised { @rec.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
-    assert_nothing_raised { @rec.find(CT::FIND_EQ) }
-    assert_equal(x['t_uinteger'], @rec.get_field('t_uinteger'))
-    assert_equal(x['t_varchar'],  @rec.get_field('t_varchar'))
+    assert_nothing_raised { @r.set_field('uinteger', x['uinteger']) }
+    assert_nothing_raised { @r.find(CT::FIND_EQ) }
+    assert_equal(x["uinteger"],  @r.get_field("uinteger"))
+    assert_equal(x["integer"],   @r.get_field("integer"))
+    assert_equal(x["bool"],      @r.get_field("bool"))
+    assert_equal(x["tinyint"],   @r.get_field("tinyint"))
+    assert_equal(x["utinyint"],  @r.get_field("utinyint"))
+    assert_equal(x["smallint"],  @r.get_field("smallint"))
+    assert_equal(x["usmallint"], @r.get_field("usmallint"))
+    assert_equal(x["money"],     @r.get_field("money"))
+    assert_equal(x["float"],     @r.get_field("float"))
+    assert_equal(x["double"],    @r.get_field("double"))
+
+    #assert_equal(x["efloat"]    )
+    #assert_equal(x["binary"]    )
+    assert_equal(x["chars"],     @r.get_field("chars"))
+    assert_equal(x["fpstring"],  @r.get_field("fpstring"))
+    assert_equal(x["f2string"],  @r.get_field("f2string"))
+    assert_equal(x["f4string"],  @r.get_field("f4string"))
+    assert_equal(x["bigint"],    @r.get_field("bigint"))
+    #assert_equal(x["number"]    )
+    assert_equal(x["currency"],  @r.get_field("currency"))
+    assert_equal(x["pstring"],   @r.get_field("pstring"))
+    #assert_equal(x["varbinary"] )
+    #assert_equal(x["lvb"]       )
+    assert_equal(x["varchar"],   @r.get_field("varchar"))
     
+    date = x["date"].to_ctdb
+    time = x["time"].to_ctdb
+    datetime = x["timestamp"].to_ctdb
+    
+    assert_equal(date.to_s, @r.get_field("date").to_s)
+    assert_equal(time.hour, @r.get_field("time").hour)
+    assert_equal(time.min,  @r.get_field("time").min)
+    assert_equal(time.sec,  @r.get_field("time").sec)
   end
 
   def test_find_first
     x = fixtures[0]
-    assert_nothing_raised { @rec = CT::Record.new(@table) }
-    assert_nothing_raised { @rec.clear }
-    assert_nothing_raised { @index = @rec.default_index }
-    assert_instance_of(CT::Index, @index)
-    assert_equal(_c[:index_name], @index.name)
-    assert_nothing_raised { @rec.first }
+    assert_nothing_raised { @r = CT::Record.new(@table) }
+    assert_nothing_raised { @r.clear }
+    assert_nothing_raised { @r.first }
+    
+    assert_equal(x["uinteger"],  @r.get_field("uinteger"))
+    assert_equal(x["integer"],   @r.get_field("integer"))
+    assert_equal(x["bool"],      @r.get_field("bool"))
+    assert_equal(x["tinyint"],   @r.get_field("tinyint"))
+    assert_equal(x["utinyint"],  @r.get_field("utinyint"))
+    assert_equal(x["smallint"],  @r.get_field("smallint"))
+    assert_equal(x["usmallint"], @r.get_field("usmallint"))
+    assert_equal(x["money"],     @r.get_field("money"))
+    assert_equal(x["float"],     @r.get_field("float"))
+    assert_equal(x["double"],    @r.get_field("double"))
+    #assert_equal(x["efloat"]    )
+    #assert_equal(x["binary"]    )
+    assert_equal(x["chars"],     @r.get_field("chars"))
+    assert_equal(x["fpstring"],  @r.get_field("fpstring"))
+    assert_equal(x["f2string"],  @r.get_field("f2string"))
+    assert_equal(x["f4string"],  @r.get_field("f4string"))
+    assert_equal(x["bigint"],    @r.get_field("bigint"))
+    #assert_equal(x["number"]    )
+    assert_equal(x["currency"],  @r.get_field("currency"))
+    assert_equal(x["pstring"],   @r.get_field("pstring"))
+    #assert_equal(x["varbinary"] )
+    #assert_equal(x["lvb"]       )
+    assert_equal(x["varchar"],   @r.get_field("varchar"))
+   
 
-    assert_equal(x['t_bool'],      @rec.get_field_as_bool('t_bool'))
-    assert_equal(x['t_tinyint'],   @rec.get_field_as_signed('t_tinyint'))
-    assert_equal(x['t_utinyint'],  @rec.get_field_as_unsigned('t_utinyint'))
-    assert_equal(x['t_smallint'],  @rec.get_field_as_signed('t_smallint'))
-    assert_equal(x['t_usmallint'], @rec.get_field_as_unsigned('t_usmallint'))
-    assert_equal(x['t_integer'],   @rec.get_field_as_signed('t_integer'))
-    assert_equal(x['t_uinteger'],  @rec.get_field_as_unsigned('t_uinteger'))
-    # t_money: "1,000.00"
-    #assert_equal(x['t_date'],      @rec.get_field_as_date('t_date'))
-    # t_time: 
-    # t_float: 2.75
-    # t_double:
-    # t_timestamp:
-    # t_efloat:
-    # t_binary:
-    assert_equal(pad(x['t_chars'], 31), @rec.get_field_as_string('t_chars'))
-    # assert_equal(x['t_fpstring'],  @rec.get_field_as_string('t_fpstring'))
-    # assert_equal(x['t_f2string'],  @rec.get_field_as_string('t_f2string'))
-    # assert_equal(x['t_f4string'],  @rec.get_field_as_string('t_f4string'))
-    # t_bigint: 2652295
-    # t_number: 12345
-    # assert_equal(x['t_number'], @rec.get_field_as_string)
-    # t_currency:
-    # t_pstring: " "
-    # t_varbinary:
-    # t_lvb:
-    assert_equal(x['t_varchar'], @rec.get_field_as_string('t_varchar'))
+    date = x["date"].to_ctdb
+    time = x["time"].to_ctdb
+    datetime = x["timestamp"].to_ctdb
+    
+    assert_equal(date.to_s, @r.get_field("date").to_s)
+    assert_equal(time.hour, @r.get_field("time").hour)
+    assert_equal(time.min,  @r.get_field("time").min)
+    assert_equal(time.sec,  @r.get_field("time").sec)
   end
 
   def test_find_last
     x = fixtures[2]
-    assert_nothing_raised { @rec = CT::Record.new(@table) }
-    assert_nothing_raised { @rec.clear }
+    assert_nothing_raised { @r = CT::Record.new(@table) }
+    assert_nothing_raised { @r.clear }
+    assert_nothing_raised { @r.last }
+    
+    assert_equal(x["uinteger"],  @r.get_field("uinteger"))
+    assert_equal(x["integer"],   @r.get_field("integer"))
+    assert_equal(x["bool"],      @r.get_field("bool"))
+    assert_equal(x["tinyint"],   @r.get_field("tinyint"))
+    assert_equal(x["utinyint"],  @r.get_field("utinyint"))
+    assert_equal(x["smallint"],  @r.get_field("smallint"))
+    assert_equal(x["usmallint"], @r.get_field("usmallint"))
+    assert_equal(x["money"],     @r.get_field("money"))
+    assert_equal(x["float"],     @r.get_field("float"))
+    assert_equal(x["double"],    @r.get_field("double"))
+    #assert_equal(x["efloat"]    )
+    #assert_equal(x["binary"]    )
+    assert_equal(x["chars"],     @r.get_field("chars"))
+    assert_equal(x["fpstring"],  @r.get_field("fpstring"))
+    assert_equal(x["f2string"],  @r.get_field("f2string"))
+    assert_equal(x["f4string"],  @r.get_field("f4string"))
+    assert_equal(x["bigint"],    @r.get_field("bigint"))
+    #assert_equal(x["number"]    )
+    assert_equal(x["currency"],  @r.get_field("currency"))
+    assert_equal(x["pstring"],   @r.get_field("pstring"))
+    #assert_equal(x["varbinary"] )
+    #assert_equal(x["lvb"]       )
+    assert_equal(x["varchar"],   @r.get_field("varchar"))
+    
+    date = x["date"].to_ctdb
+    time = x["time"].to_ctdb
+    datetime = x["timestamp"].to_ctdb
 
-    assert_nothing_raised { @rec.last }
-    assert_equal(x['t_bool'],      @rec.get_field_as_bool('t_bool'))
-    assert_equal(x['t_tinyint'],   @rec.get_field_as_signed('t_tinyint'))
-    assert_equal(x['t_utinyint'],  @rec.get_field_as_unsigned('t_utinyint'))
-    assert_equal(x['t_smallint'],  @rec.get_field_as_signed('t_smallint'))
-    assert_equal(x['t_usmallint'], @rec.get_field_as_unsigned('t_usmallint'))
-    assert_equal(x['t_integer'],   @rec.get_field_as_signed('t_integer'))
-    assert_equal(x['t_uinteger'],  @rec.get_field_as_unsigned('t_uinteger'))
+    assert_equal(date.to_s, @r.get_field("date").to_s)
+    assert_equal(time.hour, @r.get_field("time").hour)
+    assert_equal(time.min,  @r.get_field("time").min)
+    assert_equal(time.sec,  @r.get_field("time").sec)
   end
 
   def test_navigation
-    assert_nothing_raised { @rec = CT::Record.new(@table) }
-    assert_nothing_raised { @rec.clear }
-    assert_nothing_raised { @rec.first }
-    assert_equal(fixtures[0]['t_uinteger'], @rec.get_field_as_unsigned('t_uinteger'))
-    assert_nothing_raised { @rec.next }
-    assert_equal(fixtures[1]['t_uinteger'], @rec.get_field_as_unsigned('t_uinteger'))
-    assert_nothing_raised { @rec.next }
-    assert_equal(fixtures[2]['t_uinteger'], @rec.get_field_as_unsigned('t_uinteger'))
-    assert_nil(@rec.next) # => end of file
-    assert_nothing_raised { @rec.prev }
-    assert_equal(fixtures[1]['t_uinteger'], @rec.get_field_as_unsigned('t_uinteger'))
-    assert_nothing_raised { @rec.prev }
-    assert_equal(fixtures[0]['t_uinteger'], @rec.get_field_as_unsigned('t_uinteger'))
-    assert_nil(@rec.prev) # => end of file
+    assert_nothing_raised { @r = CT::Record.new(@table) }
+    assert_nothing_raised { @r.clear }
+    assert_nothing_raised { @r.first }
+    assert_equal(fixtures[0]['uinteger'], @r.get_field('uinteger'))
+    assert_nothing_raised { @r.next }
+    assert_equal(fixtures[1]['uinteger'], @r.get_field('uinteger'))
+    assert_nothing_raised { @r.next }
+    assert_equal(fixtures[2]['uinteger'], @r.get_field('uinteger'))
+    assert_nil(@r.next) # => end of file
+    assert_nothing_raised { @r.prev }
+    assert_equal(fixtures[1]['uinteger'], @r.get_field('uinteger'))
+    assert_nothing_raised { @r.prev }
+    assert_equal(fixtures[0]['uinteger'], @r.get_field('uinteger'))
+    assert_nil(@r.prev) # => end of file
   end
 
-  def test_record_set
-    assert_nothing_raised { @rec = CT::Record.new(@table) }
-    assert_nothing_raised { @rec.clear }
-    
-  end
+  #def test_record_set
+    #assert_nothing_raised { @r = CT::Record.new(@table) }
+    #assert_nothing_raised { @r.clear }
+  #end
 
-  # def test_unique_index_error
-  #   # Make sure our unique index works
-  #   assert_nothing_raised { @rec.clear }
-  #   assert_nothing_raised { @rec.set_field_as_bool('t_bool', x['t_bool']) }
-  #   assert_nothing_raised { @rec.set_field_as_signed('t_integer', x['t_integer']) }
-  #   assert_nothing_raised { @rec.set_field_as_unsigned('t_uinteger', x['t_uinteger']) }
-  #   assert_nothing_raised { @rec.set_field_as_string('t_f4string', x['t_f4string']) }
-  #   assert_nothing_raised { @rec.set_field_as_string('t_varchar', x['t_varchar']) }
-  #   assert_raise(CT::Error) { @rec.write! }
-  # end
-
-  private
-
-  def fixtures
-    @fixtures ||= YAML.load_file(File.join(File.dirname(__FILE__), 'fixture.yml'))
-  end
-
-  def pad(val, len)
-    val.ljust(len, ' ')
+  def test_record_locking
+    assert_nothing_raised { @r = CT::Record.new(@table) }
+    assert_nothing_raised { @r.clear }
+    assert_nothing_raised { @r.first }
+    assert_equal(CT::LOCK_FREE, @r.lock_mode)
+    assert_equal("CTLOCK_FREE", @r.human_lock_mode)
+    assert_equal(false, @r.locked?)
+    assert(@r.lock(CT::LOCK_READ))
+    assert_equal(CT::LOCK_READ, @r.lock_mode)
+    assert_equal("CTLOCK_READ", @r.human_lock_mode)
+    assert(@r.locked?)
+    assert(@r.read_locked?)
+    assert_equal(false, @r.write_locked?)
+    assert(@r.lock(CT::LOCK_WRITE))
+    assert_equal(CT::LOCK_WRITE, @r.lock_mode)
+    assert_equal("CTLOCK_WRITE", @r.human_lock_mode)
+    assert(@r.locked?)
+    assert(@r.write_locked?)
+    assert_equal(false, @r.read_locked?)
   end
 
 end

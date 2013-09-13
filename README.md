@@ -47,7 +47,7 @@ Record sets!
 ```ruby
 record = CT::Record.new(table)
 record.clear
-record.set_default_index("foo_ndx")
+record.default_index = "foo_ndx"
 record.set_field_as_string("foo", "bar")
 
 bytes = 0
@@ -56,10 +56,11 @@ record.get_default_index.segments.each do |segment|
   bytes -= 1 if segment.absolute_byte_offset? # => Old school
 end
 record.set_on(bytes)
-record.first
-begin
-  p record
-end while record.next
+if record.first
+  begin
+    puts record.inspect
+  end while record.next
+end
 ```
 
 ### Cleanup
@@ -89,22 +90,24 @@ CT::Model.session = { engine: "FAIRCOMS", username: "", password: "" }
 foo = Foo.find(index: :foo_ndx).index_segments(bar: 1234, sequence: 2).eq
 ```
 
-## Query Interface
+## CT::Query
 
-*Find Modes*:
-* eq
-* set
-* lt
-* lte
-* gt
-* gte
+Interface to perform record queries.
 
+#### Options
+
+* index
+* index_segments
+* limit
+* offset
+* filter
+* transformer
 
 ```ruby
-foo = Foo.where(bar: 1234, sequence: 2)
+record = CT::Query.new(table).index(:bar_ndx).index_segments(sequence: 5).eq
 ```
 
-### Contributing
+## Contributing
 
 * Fork the project
 * Create a topic branch

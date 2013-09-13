@@ -27,9 +27,6 @@ rb_ct_session_new(VALUE klass, VALUE mode)
     
     obj = Data_Make_Struct(klass, ct_session, 0, free_rb_ct_session, session);
 
-    // Allocate a new session for logon only. No session or database dictionary
-    // files will be used. No database functions can be used with this session 
-    // mode.
     if ( ( session->handle = ctdbAllocSession(FIX2INT(mode)) ) == NULL )
         rb_raise(cCTError, "ctdbAllocSession failed.");
 
@@ -274,6 +271,24 @@ rb_ct_session_get_username(VALUE self)
     return rb_str_new_cstr(name);
 }
 
+/*
+ * @return [String] The server name associated with the session
+ */
+static VALUE
+rb_ct_session_get_server_name(VALUE self)
+{
+    pTEXT name;
+    ct_session *session;
+
+    GetCTSession(self, session);
+
+    if ( ( name = ctdbGetServerName(session->handle) ) == NULL )
+        rb_raise(cCTError, "[%d] ctdbGetServerName failed.", 
+            ctdbGetError(session->handle));
+
+    return rb_str_new_cstr(name);
+}
+
 
 void init_rb_ct_session()
 {
@@ -300,4 +315,5 @@ void init_rb_ct_session()
     rb_define_method(cCTSession, "unlock", rb_ct_session_unlock, 0);
     rb_define_method(cCTSession, "unlock!", rb_ct_session_unlock_bang, 0);
     rb_define_method(cCTSession, "username", rb_ct_session_get_username, 0);
+    rb_define_method(cCTSession, "server_name", rb_ct_session_get_server_name, 0);
 }
